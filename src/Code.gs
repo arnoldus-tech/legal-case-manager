@@ -35,7 +35,7 @@ const SH = { SAGER: 'Sager', OMR: 'Områder', AKT: 'Aktivitet', IND: 'Indstillin
 const COLS = ['Sagsnr', 'Titel', 'Område', 'Status', 'Prioritet', 'Ansvarlig', 'Team', 'Eksterne',
   'Klient/afdeling', 'Modpart', 'Oprettet', 'Frist', 'Lukket', 'Mappe', 'Mappe-ID', 'Beskrivelse',
   'Mails', 'Dokumenter', 'Est. timer', 'Sidst synk'];
-const AKT_COLS = ['Tidspunkt', 'Sagsnr', 'Område', 'Type', 'Titel', 'Person', 'Link', 'Minutter', 'Nøgle'];
+const AKT_COLS = ['Tidspunkt', 'Sagsnr', 'Område', 'Type', 'Titel', 'Person', 'Link', 'Minutter', 'Nøgle', 'Kilde'];
 const OMR_COLS = ['Område', 'Kode', 'Mappe-ID', 'Mappe'];
 
 const STATUSER = ['Ny', 'Åben', 'Afventer', 'Lukket'];
@@ -60,14 +60,28 @@ const IND = {
   MIN_RED: 'Minutter pr. redigeringsdag på dokument',
   GEM_PDF: 'Gem mails som PDF på sagen (JA/NEJ)',
   GEM_VEDH: 'Gem vedhæftninger på sagen (JA/NEJ)',
+  GEM_EML: 'Gem mails som .eml (original) på sagen (JA/NEJ)',
   INTERNE: 'Interne mailadresser/domæner (komma-separeret)',
+  PRIVAT: 'Gmail-label for private mails (røres aldrig)',
+  UDELUK: 'Udelukkede domæner/adresser (komma-separeret)',
   SKABELON: 'Sagsnotat-skabelon (Doc-ID, valgfri)'
 };
 const DEFAULT_IND = [
   [IND.MIN_MAIL_IND, 5], [IND.MIN_MAIL_UD, 12], [IND.MIN_DOC, 45], [IND.MIN_SHEET, 30],
   [IND.MIN_SLIDES, 45], [IND.MIN_ANDET, 15], [IND.MIN_RED, 20],
-  [IND.GEM_PDF, 'JA'], [IND.GEM_VEDH, 'JA'], [IND.INTERNE, ''], [IND.SKABELON, '']
+  [IND.GEM_PDF, 'JA'], [IND.GEM_EML, 'JA'], [IND.GEM_VEDH, 'JA'], [IND.INTERNE, ''],
+  [IND.PRIVAT, 'Privat'], [IND.UDELUK, ''], [IND.SKABELON, '']
 ];
+
+/** Sagsnummer et vilkårligt sted i en tekst, fx KON-2026-0007. */
+const NR_RE = /[A-ZÆØÅ]{2,5}-\d{4}-\d{4}/g;
+/** Første scanning af indbakken går så mange dage tilbage. */
+const FOERSTE_SCAN_DAGE = 14;
+/** Maks. antal forslag i "Uden sag" pr. bruger. */
+const MAKS_KOE = 200;
+/** Freemail-domæner tæller ikke som "samme domæne" ved forslag. */
+const FRI_DOMAENER = ['gmail.com', 'googlemail.com', 'hotmail.com', 'hotmail.dk', 'outlook.com', 'outlook.dk',
+  'live.com', 'live.dk', 'msn.com', 'yahoo.com', 'yahoo.dk', 'icloud.com', 'me.com', 'mail.dk', 'jubii.dk'];
 
 // ============================================================
 // 2. MENU, OPSÆTNING OG TRIGGERE
@@ -291,85 +305,337 @@ function delValgt() {
 // 4. SYNKRONISERING (mails + dokumenter → aktivitet og tidsforbrug)
 // ============================================================
 
+/*
+ * Mailgenkendelse – sådan finder systemet sagen uden at brugeren skal huske et tag:
+ *   Stærke spor (arkiveres automatisk):
+ *     1. Sagsnummer i emnefeltet (med eller uden [ ])
+ *     2. Plusadresse i Til/Cc, fx sager+KON-2026-0007@firma.dk
+ *     3. Tråden har allerede labelen Sager/<nr>
+ *     4. Svar på en arkiveret mail (In-Reply-To / References peger på dens Message-ID)
+ *   Sorteres fra: label "Privat", udelukkede domæner, nyhedsbreve og automatiske mails.
+ *   Svage spor (forslag i brugerens egen "Uden sag"): sagens eksterne kontakter,
+ *     samme firmadomæne som dem, eller emne der ligner sagstitlen.
+ * Systemet læser kun headere for at klassificere. Indholdet hentes først, når mailen arkiveres.
+ */
+
 function synkroniser() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) return;
   try {
     const start = Date.now();
-    const ind = indstillinger_();
-    const akt = sh_(SH.AKT);
-    const set = new Set(akt.getLastRow() > 1
-      ? akt.getRange(2, AKT_COLS.indexOf('Nøgle') + 1, akt.getLastRow() - 1, 1).getValues().flat().filter(String) : []);
-    const interne = splitMails_(ind[IND.INTERNE] || Session.getEffectiveUser().getEmail());
-    const nye = [];
+    const ctx = synkKontekst_();
+    try { scanNyeMails_(ctx, start); } catch (e) { console.error('Scanning af nye mails fejlede: ' + e); }
+
     const synket = {};
     const graense = Date.now() - 30 * 864e5;
-
     // Ældst synkroniserede først, så alle sager når at komme med over flere kørsler
-    const sager = tabel_(SH.SAGER).rows
-      .filter(s => s['Mappe-ID'] && (s['Status'] !== 'Lukket' || !s['Lukket'] || new Date(s['Lukket']).getTime() > graense))
+    const sager = ctx.sager
+      .filter(s => s['Status'] !== 'Lukket' || !s['Lukket'] || new Date(s['Lukket']).getTime() > graense)
       .sort((a, b) => (a['Sidst synk'] ? new Date(a['Sidst synk']).getTime() : 0) - (b['Sidst synk'] ? new Date(b['Sidst synk']).getTime() : 0));
 
     for (const s of sager) {
       if (Date.now() - start > CFG.MAX_SYNK_MS) break;
       try {
-        synkMails_(s, ind, interne, set, nye);
-        synkDokumenter_(s, ind, set, nye);
+        synkSagsmails_(ctx, s);
+        synkDokumenter_(s, ctx.ind, ctx.set, ctx.nye);
         synket[s['Sagsnr']] = true;
       } catch (e) {
         console.error('Synk fejlede for ' + s['Sagsnr'] + ': ' + e);
       }
     }
 
-    if (nye.length) akt.getRange(akt.getLastRow() + 1, 1, nye.length, AKT_COLS.length).setValues(nye);
+    skrivAktivitet_(ctx);
     opdaterNoegletal_(synket);
   } finally {
     lock.releaseLock();
   }
 }
 
-function synkMails_(sag, ind, interne, set, nye) {
-  const nr = sag['Sagsnr'];
-  let label;
-  try { label = GmailApp.getUserLabelByName(CFG.LABEL_ROOT + '/' + nr) || GmailApp.createLabel(CFG.LABEL_ROOT + '/' + nr); } catch (e) { /* ignore */ }
-  const mappe = DriveApp.getFolderById(sag['Mappe-ID']);
-  let mailMappe = null;
-  const re = new RegExp('\\[\\s*' + nr.replace(/[-]/g, '\\-') + '\\s*\\]', 'i');
-
-  const traade = GmailApp.search('subject:"' + nr + '"', 0, 200);
-  traade.forEach(t => {
-    if (label) t.addLabel(label);
-    t.getMessages().forEach(m => {
-      if (!re.test(m.getSubject())) return;
-      // Message-ID er ens i alle teammedlemmers indbakker → ingen dobbeltregistrering
-      const mid = (m.getHeader('Message-ID') || m.getId()).replace(/[<>]/g, '');
-      const noegle = 'MAIL:' + mid;
-      if (set.has(noegle)) return;
-      set.add(noegle);
-
-      const fra = m.getFrom();
-      const ud = interne.some(x => fra.toLowerCase().indexOf(x) >= 0);
-      const type = ud ? 'Mail ud' : 'Mail ind';
-      const minutter = Number(ud ? ind[IND.MIN_MAIL_UD] : ind[IND.MIN_MAIL_IND]) || 0;
-      let link = 'https://mail.google.com/mail/u/0/#search/rfc822msgid%3A' + encodeURIComponent(mid);
-
-      if (String(ind[IND.GEM_PDF]).toUpperCase() === 'JA') {
-        mailMappe = mailMappe || undermappe_(mappe, UNDERMAPPER.MAIL);
-        const navn = fmt_(m.getDate(), 'yyyy-MM-dd HHmm') + ' – ' + rens_(fra.replace(/<.*>/, '')) + ' – ' + rens_(m.getSubject());
-        try {
-          const f = mailMappe.createFile(mailSomPdf_(m).setName(navn.substring(0, 150) + '.pdf'));
-          f.setDescription('Sagsstyring:mail ' + mid);
-          link = f.getUrl();
-        } catch (e) { console.warn('PDF fejlede: ' + e); }
-        if (String(ind[IND.GEM_VEDH]).toUpperCase() === 'JA') {
-          m.getAttachments({ includeInlineImages: false }).forEach(a => {
-            try { mailMappe.createFile(a.copyBlob()).setDescription('Sagsstyring:vedhæftning ' + mid); } catch (e) { /* for stor */ }
-          });
-        }
-      }
-      nye.push([m.getDate(), nr, sag['Område'], type, m.getSubject(), fra, link, minutter, noegle]);
+/** Fælles data for én synkronisering: sager, allerede arkiverede mails og indstillinger. */
+function synkKontekst_() {
+  const ind = indstillinger_();
+  const akt = sh_(SH.AKT);
+  if (akt.getRange(1, AKT_COLS.length).getValue() !== AKT_COLS[AKT_COLS.length - 1]) skrivOverskrifter_(akt, AKT_COLS);
+  const iN = AKT_COLS.indexOf('Nøgle'), iS = AKT_COLS.indexOf('Sagsnr');
+  const set = new Set(), midTilSag = {};
+  if (akt.getLastRow() > 1) {
+    akt.getRange(2, 1, akt.getLastRow() - 1, AKT_COLS.length).getValues().forEach(r => {
+      const k = String(r[iN] || '');
+      if (!k) return;
+      set.add(k);
+      if (k.indexOf('MAIL:') === 0) midTilSag[k.slice(5)] = r[iS];
     });
+  }
+  const sager = tabel_(SH.SAGER).rows.filter(s => s['Mappe-ID']);
+  const sagPrNr = {};
+  sager.forEach(s => sagPrNr[s['Sagsnr']] = s);
+  return {
+    ind: ind, set: set, midTilSag: midTilSag, sager: sager, sagPrNr: sagPrNr, nye: [], mapper: {}, labels: {},
+    interne: splitMails_(ind[IND.INTERNE] || Session.getEffectiveUser().getEmail()),
+    udeluk: splitMails_(ind[IND.UDELUK]),
+    privat: String(ind[IND.PRIVAT] || 'Privat').trim()
+  };
+}
+
+function skrivAktivitet_(ctx) {
+  if (!ctx.nye.length) return;
+  const akt = sh_(SH.AKT);
+  akt.getRange(akt.getLastRow() + 1, 1, ctx.nye.length, AKT_COLS.length).setValues(ctx.nye);
+  ctx.nye = [];
+}
+
+/** Mails med sagsnummeret i emnet og alle mails i tråde med sagens label (også ældre end scanningen). */
+function synkSagsmails_(ctx, sag) {
+  const nr = sag['Sagsnr'];
+  const label = sagLabel_(ctx, nr);
+  GmailApp.search('subject:"' + nr + '"', 0, 100).forEach(t => {
+    if (erPrivat_(ctx, t)) return;
+    if (label) t.addLabel(label);
+    t.getMessages().forEach(m => arkiverMail_(ctx, sag, m, 'Sagsnr i emne'));
   });
+  if (label) label.getThreads(0, 100).forEach(t => {
+    if (erPrivat_(ctx, t)) return;
+    t.getMessages().forEach(m => arkiverMail_(ctx, sag, m, 'Tråd'));
+  });
+}
+
+/** Gennemgår nye mails siden sidste kørsel (pr. bruger) og arkiverer eller foreslår. */
+function scanNyeMails_(ctx, start) {
+  const up = PropertiesService.getUserProperties();
+  const nu = Date.now();
+  const fra = Number(up.getProperty('SIDST_SCAN')) || (nu - FOERSTE_SCAN_DAGE * 864e5);
+  const q = 'after:' + Math.floor((fra - 3600 * 1000) / 1000) + ' -in:spam -in:trash -in:chats';
+  const alle = up.getProperties();
+  const koe = laesKoe_(alle);
+  const afvist = new Set();
+  Object.keys(alle).forEach(k => {
+    if (k.indexOf('I:') !== 0) return;
+    if (nu - Number(alle[k]) > 90 * 864e5) up.deleteProperty(k); else afvist.add(k.slice(2));
+  });
+
+  let side = 0, faerdig = true;
+  for (;;) {
+    if (Date.now() - start > CFG.MAX_SYNK_MS / 2) { faerdig = false; break; }
+    const traade = GmailApp.search(q, side * 50, 50);
+    traade.forEach(t => {
+      try { behandlTraad_(ctx, t, koe, afvist, up); } catch (e) { console.warn('Tråd sprunget over: ' + e); }
+    });
+    if (traade.length < 50) break;
+    side++;
+  }
+  if (faerdig) up.setProperty('SIDST_SCAN', String(nu));
+  begraensKoe_(up, koe);
+}
+
+function behandlTraad_(ctx, t, koe, afvist, up) {
+  if (erPrivat_(ctx, t)) return;
+  const pre = CFG.LABEL_ROOT + '/';
+  const traadNr = t.getLabels().map(l => l.getName())
+    .filter(n => n.indexOf(pre) === 0 && ctx.sagPrNr[n.slice(pre.length)])
+    .map(n => n.slice(pre.length))[0] || '';
+
+  t.getMessages().forEach(m => {
+    const mid = messageId_(m);
+    if (ctx.set.has('MAIL:' + mid) || afvist.has(mid) || koe[m.getId()] || erUdelukket_(ctx, m)) return;
+    const k = klassificer_(ctx, m, traadNr);
+    if (!k) return;
+    if (k.nr) arkiverMail_(ctx, ctx.sagPrNr[k.nr], m, k.kilde);
+    else gemIKoe_(up, koe, m, mid, k.forslag);
+  });
+}
+
+/** Returnerer {nr, kilde} ved stærkt spor, {forslag:[…]} ved svage spor, ellers null. */
+function klassificer_(ctx, m, traadNr) {
+  const numre = (String(m.getSubject() || '').toUpperCase().match(NR_RE) || []).filter(n => ctx.sagPrNr[n]);
+  if (numre.length) return { nr: numre[0], kilde: 'Sagsnr i emne' };
+
+  const adr = [m.getTo(), m.getCc(), m.getHeader('Delivered-To')].join(',').toUpperCase();
+  const plus = (adr.match(/\+([A-ZÆØÅ]{2,5}-\d{4}-\d{4})@/) || [])[1];
+  if (plus && ctx.sagPrNr[plus]) return { nr: plus, kilde: 'Plusadresse' };
+
+  if (traadNr) return { nr: traadNr, kilde: 'Tråd' };
+
+  const ref = referencer_(m).find(r => ctx.midTilSag[r] && ctx.sagPrNr[ctx.midTilSag[r]]);
+  if (ref) return { nr: ctx.midTilSag[ref], kilde: 'Svar i sagstråd' };
+
+  if (erMassemail_(m)) return null;
+  const forslag = forslag_(ctx, m);
+  return forslag.length ? { forslag: forslag } : null;
+}
+
+/** Svage spor mod åbne sager oprettet før mailen. Højst 3 forslag, bedste først. */
+function forslag_(ctx, m) {
+  const dato = m.getDate().getTime();
+  const egne = a => ctx.interne.some(x => a.indexOf(x) >= 0);
+  const adresser = adresser_([m.getFrom(), m.getTo(), m.getCc()].join(',')).filter(a => !egne(a));
+  const domaener = adresser.map(a => a.split('@')[1]).filter(d => FRI_DOMAENER.indexOf(d) < 0);
+  const emneOrd = ord_(m.getSubject());
+
+  const ud = [];
+  ctx.sager.forEach(s => {
+    if (s['Status'] === 'Lukket' || (s['Oprettet'] && new Date(s['Oprettet']).getTime() > dato)) return;
+    const eks = adresser_(s['Eksterne']);
+    let point = 0; const grunde = [];
+    if (adresser.some(a => eks.indexOf(a) >= 0)) { point += 3; grunde.push('kontakt på sagen'); }
+    else if (domaener.some(d => eks.some(e => e.split('@')[1] === d))) { point += 2; grunde.push('samme domæne som sagens kontakt'); }
+    const faelles = ord_(s['Titel']).filter(o => emneOrd.indexOf(o) >= 0);
+    if (faelles.length >= 2 || (faelles.length === 1 && point > 0)) { point += 2; grunde.push('emnet ligner sagstitlen'); }
+    if (point >= 2) ud.push({ nr: s['Sagsnr'], titel: s['Titel'], grund: grunde.join(' + '), point: point });
+  });
+  return ud.sort((a, b) => b.point - a.point).slice(0, 3);
+}
+
+/**
+ * Arkiverer én mail på sagen: PDF, .eml og vedhæftninger i "01 Korrespondance", label i Gmail
+ * og en række i Aktivitet. Message-ID sikrer, at samme mail i flere indbakker kun tælles én gang.
+ */
+function arkiverMail_(ctx, sag, m, kilde) {
+  const mid = messageId_(m);
+  const noegle = 'MAIL:' + mid;
+  if (!sag || ctx.set.has(noegle)) return false;
+  ctx.set.add(noegle);
+  const nr = sag['Sagsnr'];
+  ctx.midTilSag[mid] = nr;
+
+  const ind = ctx.ind;
+  const ja = k => String(ind[k]).toUpperCase() === 'JA';
+  const fra = m.getFrom();
+  const ud = ctx.interne.some(x => fra.toLowerCase().indexOf(x) >= 0);
+  let link = gmailLink_(mid);
+
+  if (ja(IND.GEM_PDF) || ja(IND.GEM_EML) || ja(IND.GEM_VEDH)) {
+    const mappe = ctx.mapper[nr] = ctx.mapper[nr] || undermappe_(DriveApp.getFolderById(sag['Mappe-ID']), UNDERMAPPER.MAIL);
+    const navn = (fmt_(m.getDate(), 'yyyy-MM-dd HHmm') + ' – ' + rens_(fra.replace(/<.*>/, '')) + ' – ' + rens_(m.getSubject())).substring(0, 150);
+    if (ja(IND.GEM_PDF)) {
+      try {
+        const f = mappe.createFile(mailSomPdf_(m).setName(navn + '.pdf'));
+        f.setDescription('Sagsstyring:mail ' + mid);
+        link = f.getUrl();
+      } catch (e) { console.warn('PDF fejlede: ' + e); }
+    }
+    if (ja(IND.GEM_EML)) {
+      try {
+        mappe.createFile(Utilities.newBlob(m.getRawContent(), 'message/rfc822', navn + '.eml'))
+          .setDescription('Sagsstyring:mail-eml ' + mid);
+      } catch (e) { console.warn('.eml fejlede: ' + e); }
+    }
+    if (ja(IND.GEM_VEDH)) {
+      m.getAttachments({ includeInlineImages: false }).forEach(a => {
+        try { mappe.createFile(a.copyBlob()).setDescription('Sagsstyring:vedhæftning ' + mid); } catch (e) { /* for stor */ }
+      });
+    }
+  }
+  const label = sagLabel_(ctx, nr);
+  if (label) { try { m.getThread().addLabel(label); } catch (e) { /* ignore */ } }
+
+  ctx.nye.push([m.getDate(), nr, sag['Område'], ud ? 'Mail ud' : 'Mail ind', m.getSubject(), fra, link,
+    Number(ud ? ind[IND.MIN_MAIL_UD] : ind[IND.MIN_MAIL_IND]) || 0, noegle, kilde]);
+  return true;
+}
+
+// ---------- "Uden sag": forslag gemmes pr. bruger i UserProperties (kun synlige for ejeren) ----------
+
+function laesKoe_(alle) {
+  const koe = {};
+  Object.keys(alle).forEach(k => {
+    if (k.indexOf('Q:') !== 0) return;
+    try { koe[k.slice(2)] = JSON.parse(alle[k]); } catch (e) { /* ødelagt post */ }
+  });
+  return koe;
+}
+
+function gemIKoe_(up, koe, m, mid, forslag) {
+  const e = { id: m.getId(), mid: mid, dato: m.getDate().toISOString(), fra: m.getFrom(),
+    emne: String(m.getSubject() || '').substring(0, 300), forslag: forslag.map(f => ({ nr: f.nr, titel: f.titel, grund: f.grund })) };
+  up.setProperty('Q:' + e.id, JSON.stringify(e));
+  koe[e.id] = e;
+}
+
+function begraensKoe_(up, koe) {
+  const ids = Object.keys(koe).sort((a, b) => koe[a].dato < koe[b].dato ? 1 : -1);
+  ids.slice(MAKS_KOE).forEach(id => { up.deleteProperty('Q:' + id); delete koe[id]; });
+}
+
+/** Til web-appen: brugerens egne forslag + åbne sager at vælge imellem. */
+function hentUdenSag() {
+  const koe = laesKoe_(PropertiesService.getUserProperties().getProperties());
+  const poster = Object.keys(koe).map(id => Object.assign({ link: gmailLink_(koe[id].mid) }, koe[id]))
+    .sort((a, b) => a.dato < b.dato ? 1 : -1);
+  const sager = tabel_(SH.SAGER).rows.filter(s => s['Status'] !== 'Lukket')
+    .map(s => ({ nr: s['Sagsnr'], titel: s['Titel'] })).sort((a, b) => a.nr < b.nr ? 1 : -1);
+  return { poster: poster, sager: sager };
+}
+
+/** Knytter mailen – og resten af dens tråd – til sagen. Labelen sørger for, at fremtidige svar følger med. */
+function knytTilSag(id, nr) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const ctx = synkKontekst_();
+    const sag = ctx.sagPrNr[nr];
+    if (!sag) throw new Error('Ukendt sag: ' + nr);
+    const t = GmailApp.getMessageById(id).getThread();
+    const kilde = 'Manuelt – ' + Session.getActiveUser().getEmail();
+    let antal = 0;
+    t.getMessages().forEach(m => { if (arkiverMail_(ctx, sag, m, kilde)) antal++; });
+    const label = sagLabel_(ctx, nr);
+    if (label) t.addLabel(label);
+    skrivAktivitet_(ctx);
+    opdaterNoegletal_({});
+    const up = PropertiesService.getUserProperties();
+    t.getMessages().forEach(m => up.deleteProperty('Q:' + m.getId()));
+    return { nr: nr, antal: antal };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Fjerner forslaget og husker det, så mailen ikke foreslås igen. */
+function afvisForslag(id) {
+  const up = PropertiesService.getUserProperties();
+  const raa = up.getProperty('Q:' + id);
+  up.deleteProperty('Q:' + id);
+  if (raa) { try { up.setProperty('I:' + JSON.parse(raa).mid, String(Date.now())); } catch (e) { /* ignore */ } }
+  return true;
+}
+
+// ---------- små mailhjælpere ----------
+
+function messageId_(m) { return String(m.getHeader('Message-ID') || m.getId()).replace(/[<>]/g, '').trim(); }
+function gmailLink_(mid) { return 'https://mail.google.com/mail/u/0/#search/rfc822msgid%3A' + encodeURIComponent(mid); }
+
+function referencer_(m) {
+  const fund = ((m.getHeader('In-Reply-To') || '') + ' ' + (m.getHeader('References') || '')).match(/<[^>]+>/g) || [];
+  return fund.map(r => r.slice(1, -1).trim());
+}
+
+function adresser_(s) {
+  return (String(s || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []).map(a => a.toLowerCase());
+}
+
+function ord_(s) {
+  return String(s || '').toLowerCase().replace(/^(\s*(re|sv|fw|fwd|vs)\s*:\s*)+/i, '')
+    .split(/[^a-zæøå0-9]+/).filter(o => o.length >= 5);
+}
+
+function erPrivat_(ctx, t) { return t.getLabels().some(l => l.getName() === ctx.privat); }
+
+function erUdelukket_(ctx, m) {
+  if (!ctx.udeluk.length) return false;
+  const a = adresser_(m.getFrom()).join(' ');
+  return ctx.udeluk.some(u => a.indexOf(u) >= 0);
+}
+
+function erMassemail_(m) {
+  return !!m.getHeader('List-Unsubscribe') || /bulk|list|junk/i.test(m.getHeader('Precedence') || '') ||
+    /no-?reply|do-?not-?reply|mailer-daemon|notifications?@/i.test(m.getFrom());
+}
+
+function sagLabel_(ctx, nr) {
+  if (ctx.labels[nr] !== undefined) return ctx.labels[nr];
+  const navn = CFG.LABEL_ROOT + '/' + nr;
+  try { ctx.labels[nr] = GmailApp.getUserLabelByName(navn) || GmailApp.createLabel(navn); } catch (e) { ctx.labels[nr] = null; }
+  return ctx.labels[nr];
 }
 
 function mailSomPdf_(m) {

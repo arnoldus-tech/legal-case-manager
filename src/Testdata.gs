@@ -53,7 +53,7 @@ function opretTestsager() {
     const tid = () => new Date(oprettet.getTime() + Math.random() * (slut - oprettet.getTime()));
     const tilfoej = (type, titel, min, n) => {
       for (let k = 0; k < n; k++) {
-        aktRows.push([tid(), res.nr, o.navn, type, titel, 'test', res.mappeUrl, min, 'TEST:' + res.nr + ':' + type + ':' + k]);
+        aktRows.push([tid(), res.nr, o.navn, type, titel, 'test', res.mappeUrl, min, 'TEST:' + res.nr + ':' + type + ':' + k, 'Testdata']);
       }
     };
     tilfoej('Mail ind', res.tag + ' Henvendelse', Number(ind[IND.MIN_MAIL_IND]) || 5, Math.floor(Math.random() * 25));

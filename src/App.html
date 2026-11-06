@@ -48,6 +48,13 @@
   .tag { font-family:Consolas, monospace; background:#fff; border:1px dashed var(--accent); padding:2px 6px; border-radius:4px; }
   .indlaes { color:var(--dæmpet); padding:30px; text-align:center; }
   a { color:var(--accent); }
+  .badge { display:inline-block; min-width:18px; padding:0 5px; border-radius:9px; background:var(--gul); color:#1d2733; font-size:11px; font-weight:600; text-align:center; }
+  .badge:empty { display:none; }
+  .forslag { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
+  .forslag button { text-align:left; }
+  .forslag small { color:var(--dæmpet); }
+  .knyt { display:flex; gap:6px; margin-top:6px; }
+  .knyt select { max-width:260px; padding:4px 6px; font-size:12px; }
   @media (max-width:700px) { form.ny { grid-template-columns:1fr; } .gitter { grid-template-columns:1fr; } }
 </style>
 </head>
@@ -57,6 +64,7 @@
   <nav>
     <button data-vis="dashboard">Dashboard</button>
     <button data-vis="sager">Sager</button>
+    <button data-vis="udensag">Uden sag <span id="koeAntal" class="badge"></span></button>
     <button data-vis="ny">Ny sag</button>
   </nav>
   <div class="hoejre">
@@ -101,6 +109,21 @@
     <p id="antal" style="color:var(--dæmpet);font-size:12px"></p>
   </section>
 
+  <!-- UDEN SAG -->
+  <section class="vis" id="vis-udensag">
+    <div class="filtre" style="align-items:center">
+      <span style="color:var(--dæmpet);font-size:13px;flex:1;min-width:240px">
+        Mails fra <b>din egen</b> indbakke, som kan høre til en sag. Kun du kan se denne liste.
+        Når du knytter en mail, følger resten af tråden og fremtidige svar automatisk med.
+      </span>
+      <button class="knap lys lille" id="synkKnap" onclick="synkNu()">Synkronisér nu</button>
+    </div>
+    <div class="tabelboks"><table>
+      <thead><tr><th>Dato</th><th>Fra</th><th>Emne</th><th>Forslag</th><th></th></tr></thead>
+      <tbody id="t-koe"><tr><td colspan="5" class="indlaes">Henter…</td></tr></tbody>
+    </table></div>
+  </section>
+
   <!-- NY SAG -->
   <section class="vis" id="vis-ny">
     <form class="ny" id="nyForm" onsubmit="opret(event)">
@@ -134,6 +157,7 @@
     document.querySelectorAll('nav button').forEach(b => b.classList.toggle('aktiv', b.dataset.vis === v));
     document.querySelectorAll('.vis').forEach(s => s.classList.toggle('aktiv', s.id === 'vis-' + v));
     if (v === 'dashboard' && D && chartsKlar) tegnDashboard();
+    if (v === 'udensag') hentKoe();
   }
   skift(START_VIS);
 
@@ -267,8 +291,55 @@
         <a href="${esc(r.mappeUrl)}" target="_blank">Åbn sagsmappen</a> · <a href="${esc(r.notatUrl)}" target="_blank">Åbn sagsnotat</a>
         ${r.fejl && r.fejl.length ? `<br><br><span class="rod">Kunne ikke dele med: ${esc(r.fejl.join(', '))} (kræver Google-konto).</span>` : ''}
       </div>`;
+      if (ventendeMail) { const id = ventendeMail; ventendeMail = null; knyt(id, r.nr); }
       hent();
     }).withFailureHandler(e => { knap.disabled = false; knap.textContent = 'Opret sag'; fejl(e); }).opretSag(data);
+  }
+
+  // ---------- Uden sag ----------
+  let K = null, ventendeMail = null;
+  function hentKoe() {
+    google.script.run.withSuccessHandler(k => { K = k; tegnKoe(); }).withFailureHandler(fejl).hentUdenSag();
+  }
+  function tegnKoe() {
+    byId('koeAntal').textContent = K.poster.length || '';
+    const valg = '<option value="">Vælg sag…</option>' + K.sager.map(s => `<option value="${esc(s.nr)}">${esc(s.nr)} ${esc(s.titel)}</option>`).join('');
+    byId('t-koe').innerHTML = K.poster.map(p => `<tr id="koe-${esc(p.id)}">
+      <td style="white-space:nowrap">${esc(p.dato.slice(0, 10))}<br><small style="color:var(--dæmpet)">${esc(p.dato.slice(11, 16))}</small></td>
+      <td>${esc(p.fra)}</td>
+      <td><a href="${esc(p.link)}" target="_blank">${esc(p.emne || '(intet emne)')}</a></td>
+      <td><div class="forslag">${p.forslag.map(f => `<button class="knap lys lille" onclick="knyt('${esc(p.id)}','${esc(f.nr)}')">→ ${esc(f.nr)} ${esc(f.titel)}</button><small>${esc(f.grund)}</small>`).join('')}
+        <div class="knyt"><select id="valg-${esc(p.id)}">${valg}</select>
+        <button class="knap lys lille" onclick="knyt('${esc(p.id)}', byId('valg-${esc(p.id)}').value)">Knyt</button></div></div></td>
+      <td style="white-space:nowrap">
+        <button class="knap lys lille" onclick="nySagFraMail('${esc(p.id)}')">Ny sag</button>
+        <button class="knap lys lille" onclick="afvis('${esc(p.id)}')">Ikke en sag</button>
+      </td></tr>`).join('') || '<tr><td colspan="5" class="indlaes">Ingen mails venter. 🎉</td></tr>';
+  }
+  function knyt(id, nr) {
+    if (!nr) { besked('Vælg en sag først.', true); return; }
+    google.script.run.withSuccessHandler(r => {
+      besked(`${r.antal} mail(s) er knyttet til <b>${esc(r.nr)}</b>. Fremtidige svar i tråden kommer automatisk med.`);
+      hentKoe(); hent();
+    }).withFailureHandler(fejl).knytTilSag(id, nr);
+  }
+  function afvis(id) {
+    google.script.run.withSuccessHandler(() => { const r = byId('koe-' + id); if (r) r.remove(); hentKoe(); })
+      .withFailureHandler(fejl).afvisForslag(id);
+  }
+  function nySagFraMail(id) {
+    const p = K.poster.find(x => x.id === id); if (!p) return;
+    ventendeMail = id;
+    const f = byId('nyForm');
+    f.titel.value = (p.emne || '').replace(/^((re|sv|fw|fwd|vs)\s*:\s*)+/i, '');
+    f.beskrivelse.value = 'Oprettet fra mail fra ' + p.fra + ' (' + p.dato.slice(0, 10) + ').';
+    skift('ny');
+    besked('Udfyld og opret sagen – mailen og dens tråd knyttes automatisk bagefter.');
+  }
+  function synkNu() {
+    const k = byId('synkKnap'); k.disabled = true; k.textContent = 'Synkroniserer… (kan tage et par minutter)';
+    google.script.run.withSuccessHandler(() => { k.disabled = false; k.textContent = 'Synkronisér nu'; hentKoe(); hent(); })
+      .withFailureHandler(e => { k.disabled = false; k.textContent = 'Synkronisér nu'; fejl(e); }).synkroniser();
   }
 
   function rapport() {
@@ -288,6 +359,7 @@
   }
 
   hent();
+  hentKoe();
 </script>
 </body>
 </html>
