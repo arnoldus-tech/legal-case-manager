@@ -8,6 +8,9 @@
 *.eml
 exports/
 
+# Local backups of the live Apps Script project
+_backup/
+
 # OS / editor
 .DS_Store
 Thumbs.db
