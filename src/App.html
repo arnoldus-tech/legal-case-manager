@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+<style>
+  :root { --bg:#f6f8fb; --kort:#fff; --tekst:#1d2733; --dæmpet:#5f6b7a; --linje:#e3e8ef; --primær:#1f4e79; --accent:#2e86ab; --rød:#c8553d; --grøn:#59a96a; --gul:#f2a541; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: "Segoe UI", Roboto, Arial, sans-serif; background:var(--bg); color:var(--tekst); font-size:14px; }
+  header { background:var(--primær); color:#fff; padding:12px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; position:sticky; top:0; z-index:5; }
+  header h1 { font-size:17px; margin:0; font-weight:600; }
+  nav { display:flex; gap:4px; }
+  nav button { background:transparent; color:#cfe0f0; border:0; padding:7px 12px; border-radius:6px; cursor:pointer; font-size:14px; }
+  nav button.aktiv { background:rgba(255,255,255,.16); color:#fff; }
+  header .hoejre { margin-left:auto; display:flex; gap:10px; align-items:center; font-size:12px; color:#cfe0f0; }
+  main { padding:18px 20px 40px; max-width:1400px; margin:0 auto; }
+  .vis { display:none; } .vis.aktiv { display:block; }
+  .kpi { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px; }
+  .kpi div { background:var(--kort); border:1px solid var(--linje); border-radius:10px; padding:12px 14px; }
+  .kpi b { display:block; font-size:26px; color:var(--primær); font-variant-numeric:tabular-nums; }
+  .kpi span { color:var(--dæmpet); font-size:12px; }
+  .kpi .advar b { color:var(--rød); }
+  .gitter { display:grid; grid-template-columns:repeat(auto-fit,minmax(420px,1fr)); gap:14px; }
+  .kort { background:var(--kort); border:1px solid var(--linje); border-radius:10px; padding:12px 14px; min-width:0; }
+  .kort h2 { font-size:14px; margin:0 0 4px; } .kort p.under { margin:0 0 6px; color:var(--dæmpet); font-size:12px; }
+  .diagram { height:300px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--linje); vertical-align:middle; }
+  th { color:var(--dæmpet); font-weight:600; font-size:12px; background:#fafbfd; position:sticky; top:0; }
+  td.tal, th.tal { text-align:right; font-variant-numeric:tabular-nums; }
+  .tabelboks { overflow:auto; max-height:70vh; border:1px solid var(--linje); border-radius:10px; background:var(--kort); }
+  .pille { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; background:#eef3f8; }
+  .st-Ny { background:#fff4e0; } .st-Åben { background:#e5f3ea; } .st-Afventer { background:#eef0fb; } .st-Lukket { background:#f0f0f0; color:#777; }
+  .rod { color:var(--rød); font-weight:600; }
+  .filtre { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  input, select, textarea { font:inherit; padding:7px 9px; border:1px solid #c9d2dd; border-radius:6px; background:#fff; color:inherit; }
+  textarea { min-height:90px; width:100%; }
+  button.knap { background:var(--accent); color:#fff; border:0; padding:8px 14px; border-radius:6px; cursor:pointer; font:inherit; }
+  button.knap.lys { background:#eef3f8; color:var(--primær); }
+  button.lille { padding:4px 8px; font-size:12px; }
+  button:disabled { opacity:.6; cursor:wait; }
+  form.ny { max-width:760px; display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
+  form.ny label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--dæmpet); }
+  form.ny .bred { grid-column:1 / -1; }
+  .besked { margin:12px 0; padding:12px 14px; border-radius:8px; background:#e5f3ea; border:1px solid #bfe0c9; }
+  .besked.fejl { background:#fce8e6; border-color:#f3c1bb; }
+  .tag { font-family:Consolas, monospace; background:#fff; border:1px dashed var(--accent); padding:2px 6px; border-radius:4px; }
+  .indlaes { color:var(--dæmpet); padding:30px; text-align:center; }
+  a { color:var(--accent); }
+  @media (max-width:700px) { form.ny { grid-template-columns:1fr; } .gitter { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚖️ Sagsstyring</h1>
+  <nav>
+    <button data-vis="dashboard">Dashboard</button>
+    <button data-vis="sager">Sager</button>
+    <button data-vis="ny">Ny sag</button>
+  </nav>
+  <div class="hoejre">
+    <span id="opdateret"></span>
+    <button class="knap lys lille" onclick="hent()">Opdatér</button>
+    <button class="knap lys lille" id="rapportKnap" onclick="rapport()">Lav Slides-rapport</button>
+  </div>
+</header>
+
+<main>
+  <div id="global"></div>
+
+  <!-- DASHBOARD -->
+  <section class="vis" id="vis-dashboard">
+    <div class="kpi" id="kpi"><div class="indlaes">Henter data…</div></div>
+    <div class="gitter">
+      <div class="kort"><h2>Fordeling på sagsområder</h2><p class="under">Alle sager</p><div id="d-omr" class="diagram"></div></div>
+      <div class="kort"><h2>Hvad bruges tiden på?</h2><p class="under">Estimerede timer pr. område, opdelt på mails og dokumentarbejde</p><div id="d-tid" class="diagram"></div></div>
+      <div class="kort"><h2>Tid fordelt på aktivitetstype</h2><p class="under">Estimerede timer i alt</p><div id="d-typer" class="diagram"></div></div>
+      <div class="kort"><h2>Oprettede og lukkede sager</h2><p class="under">Seneste 12 måneder</p><div id="d-mdr" class="diagram"></div></div>
+      <div class="kort"><h2>Åbne sager pr. ansvarlig</h2><p class="under">Arbejdsbyrde</p><div id="d-ansv" class="diagram"></div></div>
+      <div class="kort"><h2>Mest tidskrævende sager</h2><p class="under">Top 10, estimat</p><div id="t-top"></div></div>
+    </div>
+    <p class="under" style="color:var(--dæmpet);font-size:12px;margin-top:14px">
+      Timer er estimater ud fra mails med [sagsnr] i emnefeltet og dokumenter i sagsmapperne, vægtet med satserne i fanen "Indstillinger".
+    </p>
+  </section>
+
+  <!-- SAGER -->
+  <section class="vis" id="vis-sager">
+    <div class="filtre">
+      <input id="f-sog" placeholder="Søg i sagsnr, titel, klient, modpart…" style="flex:1;min-width:220px" oninput="tegnSager()">
+      <select id="f-omr" onchange="tegnSager()"><option value="">Alle områder</option></select>
+      <select id="f-status" onchange="tegnSager()"><option value="aktive">Aktive sager</option><option value="">Alle statusser</option></select>
+      <select id="f-ansv" onchange="tegnSager()"><option value="">Alle ansvarlige</option></select>
+    </div>
+    <div class="tabelboks"><table>
+      <thead><tr><th>Sagsnr</th><th>Titel</th><th>Område</th><th>Status</th><th>Ansvarlig</th><th>Frist</th>
+        <th class="tal">Mails</th><th class="tal">Dok.</th><th class="tal">Timer</th><th>Handlinger</th></tr></thead>
+      <tbody id="t-sager"></tbody>
+    </table></div>
+    <p id="antal" style="color:var(--dæmpet);font-size:12px"></p>
+  </section>
+
+  <!-- NY SAG -->
+  <section class="vis" id="vis-ny">
+    <form class="ny" id="nyForm" onsubmit="opret(event)">
+      <label class="bred">Titel *<input name="titel" required placeholder="Fx Leverandøraftale med NordLog A/S"></label>
+      <label>Sagsområde *<select name="omraade" id="ny-omr" required></select></label>
+      <label>Status<select name="status"><option>Ny</option><option selected>Åben</option><option>Afventer</option></select></label>
+      <label>Prioritet<select name="prioritet"><option>Høj</option><option selected>Normal</option><option>Lav</option></select></label>
+      <label>Frist<input type="date" name="frist"></label>
+      <label>Ansvarlig (e-mail)<input type="email" name="ansvarlig" id="ny-ansv"></label>
+      <label>Klient / afdeling<input name="klient" placeholder="Fx Indkøb"></label>
+      <label>Modpart<input name="modpart"></label>
+      <label>Team (e-mails, komma-separeret)<input name="team" placeholder="kollega@firma.dk, …"></label>
+      <label class="bred">Eksterne (e-mails – får kun adgang til mappen "03 Delt med eksterne")<input name="eksterne" placeholder="advokat@ekstern.dk"></label>
+      <label class="bred">Beskrivelse<textarea name="beskrivelse" placeholder="Kort beskrivelse af sagen, baggrund og ønsket resultat"></textarea></label>
+      <div class="bred"><button class="knap" id="opretKnap">Opret sag</button></div>
+    </form>
+    <div id="ny-resultat"></div>
+  </section>
+</main>
+
+<script>
+  const START_VIS = '<?= view ?>';
+  const FARVER = ['#1f4e79','#2e86ab','#59a96a','#f2a541','#c8553d','#7b6d8d','#4f5d75','#9bc1bc','#e07a5f'];
+  let D = null, chartsKlar = false;
+
+  google.charts.load('current', { packages: ['corechart'], language: 'da' });
+  google.charts.setOnLoadCallback(() => { chartsKlar = true; if (D) tegnDashboard(); });
+
+  document.querySelectorAll('nav button').forEach(b => b.onclick = () => skift(b.dataset.vis));
+  function skift(v) {
+    document.querySelectorAll('nav button').forEach(b => b.classList.toggle('aktiv', b.dataset.vis === v));
+    document.querySelectorAll('.vis').forEach(s => s.classList.toggle('aktiv', s.id === 'vis-' + v));
+    if (v === 'dashboard' && D && chartsKlar) tegnDashboard();
+  }
+  skift(START_VIS);
+
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function besked(html, fejl) { document.getElementById('global').innerHTML = html ? `<div class="besked ${fejl ? 'fejl' : ''}">${html}</div>` : ''; }
+  function fejl(e) { besked('Fejl: ' + esc(e && e.message ? e.message : e), true); }
+
+  function hent() {
+    google.script.run.withSuccessHandler(d => {
+      D = d;
+      document.getElementById('opdateret').textContent = 'Opdateret ' + d.opdateret;
+      udfyldValg();
+      tegnKpi();
+      if (chartsKlar) tegnDashboard();
+      tegnSager();
+    }).withFailureHandler(fejl).getDashboardData();
+  }
+
+  function udfyldValg() {
+    const opt = (arr) => arr.map(x => `<option>${esc(x)}</option>`).join('');
+    document.getElementById('ny-omr').innerHTML = opt(D.omrNavne);
+    document.getElementById('f-omr').innerHTML = '<option value="">Alle områder</option>' + opt(D.omrNavne);
+    const ansv = [...new Set(D.sager.map(s => s.ansvarlig).filter(Boolean))].sort();
+    const fa = document.getElementById('f-ansv'), gl = fa.value;
+    fa.innerHTML = '<option value="">Alle ansvarlige</option>' + opt(ansv); fa.value = gl;
+    const na = document.getElementById('ny-ansv'); if (!na.value) na.value = D.bruger || '';
+  }
+
+  function tegnKpi() {
+    const k = D.k;
+    const kort = [[k.total,'Sager i alt'],[k.aabne,'Åbne sager'],[k.lukkede,'Lukkede sager'],[k.nye,'Nye (intake)'],
+      [k.afventer,'Afventer'],[k.overskredet,'Overskredne frister', k.overskredet > 0],[k.oprettet30,'Oprettet seneste 30 dage'],
+      [k.lukket30,'Lukket seneste 30 dage'],[k.timer.toLocaleString('da-DK'),'Estimerede timer i alt']];
+    document.getElementById('kpi').innerHTML = kort.map(x => `<div class="${x[2] ? 'advar' : ''}"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('');
+  }
+
+  function tegnDashboard() {
+    const V = google.visualization;
+    const basis = { chartArea: { left: 10, top: 10, width: '95%', height: '85%' }, colors: FARVER, fontName: 'Segoe UI', legend: { position: 'right' } };
+    const omr = D.omraader.filter(o => o.total > 0);
+
+    // Fordeling på område
+    const d1 = V.arrayToDataTable([['Område','Sager']].concat(omr.map(o => [o.navn, o.total])));
+    tom('d-omr', omr.length) || new V.PieChart(byId('d-omr')).draw(d1, Object.assign({}, basis, { pieHole: .5 }));
+
+    // Tid pr. område stablet pr. aktivitetstype
+    const medTid = D.omraader.filter(o => o.timer > 0).sort((a, b) => b.timer - a.timer);
+    const d2 = V.arrayToDataTable([['Område'].concat(D.aktTyper)].concat(medTid.map(o => [o.navn].concat(D.aktTyper.map(t => o.typer[t] || 0)))));
+    tom('d-tid', medTid.length) || new V.BarChart(byId('d-tid')).draw(d2, Object.assign({}, basis, {
+      isStacked: true, legend: { position: 'bottom' }, chartArea: { left: 140, top: 10, width: '70%', height: '75%' },
+      hAxis: { title: 'Timer', minValue: 0 } }));
+
+    // Aktivitetstyper
+    const typer = Object.keys(D.typer).filter(t => D.typer[t] > 0);
+    const d3 = V.arrayToDataTable([['Aktivitet','Timer']].concat(typer.map(t => [t, D.typer[t]])));
+    tom('d-typer', typer.length) || new V.PieChart(byId('d-typer')).draw(d3, Object.assign({}, basis, { pieHole: .5 }));
+
+    // Måneder
+    const d4 = V.arrayToDataTable([['Måned','Oprettet','Lukket']].concat(D.maaneder.map(m => [m.label, m.oprettet, m.lukket])));
+    new V.ColumnChart(byId('d-mdr')).draw(d4, Object.assign({}, basis, { colors: ['#2e86ab','#9aa0a6'],
+      legend: { position: 'bottom' }, chartArea: { left: 40, top: 10, width: '90%', height: '70%' }, vAxis: { minValue: 0, format: '0' } }));
+
+    // Ansvarlige
+    const d5 = V.arrayToDataTable([['Ansvarlig','Åbne sager']].concat(D.ansvarlig.map(a => [a.navn, a.antal])));
+    tom('d-ansv', D.ansvarlig.length) || new V.BarChart(byId('d-ansv')).draw(d5, Object.assign({}, basis, {
+      legend: { position: 'none' }, colors: ['#1f4e79'], chartArea: { left: 180, top: 10, width: '65%', height: '85%' }, hAxis: { minValue: 0, format: '0' } }));
+
+    // Top 10
+    const top = D.sager.filter(s => s.timer > 0).sort((a, b) => b.timer - a.timer).slice(0, 10);
+    byId('t-top').innerHTML = top.length ? `<table><tr><th>Sag</th><th>Område</th><th class="tal">Mails</th><th class="tal">Dok.</th><th class="tal">Timer</th></tr>` +
+      top.map(s => `<tr><td><a href="${esc(s.mappe)}" target="_blank">${esc(s.nr)}</a> ${esc(s.titel)}</td><td>${esc(s.omraade)}</td>
+        <td class="tal">${s.mails}</td><td class="tal">${s.dok}</td><td class="tal">${s.timer}</td></tr>`).join('') + '</table>'
+      : '<p class="indlaes">Ingen registreret aktivitet endnu.</p>';
+  }
+  const byId = id => document.getElementById(id);
+  function tom(id, n) { if (n) return false; byId(id).innerHTML = '<p class="indlaes">Ingen data endnu.</p>'; return true; }
+
+  function tegnSager() {
+    if (!D) return;
+    const q = byId('f-sog').value.toLowerCase(), o = byId('f-omr').value, st = byId('f-status').value, a = byId('f-ansv').value;
+    const rows = D.sager.filter(s =>
+      (!o || s.omraade === o) && (!a || s.ansvarlig === a) &&
+      (st === '' || (st === 'aktive' ? s.status !== 'Lukket' : s.status === st)) &&
+      (!q || [s.nr, s.titel, s.klient, s.modpart, s.ansvarlig].join(' ').toLowerCase().includes(q)))
+      .sort((x, y) => x.nr < y.nr ? 1 : -1);
+    const statusValg = nr => D.statuser.map(x => `<option ${x === nr ? 'selected' : ''}>${x}</option>`).join('');
+    byId('t-sager').innerHTML = rows.map(s => `<tr>
+      <td><a href="${esc(s.mappe)}" target="_blank"><b>${esc(s.nr)}</b></a></td>
+      <td>${esc(s.titel)}${s.klient ? `<br><span style="color:var(--dæmpet);font-size:12px">${esc(s.klient)}${s.modpart ? ' / ' + esc(s.modpart) : ''}</span>` : ''}</td>
+      <td>${esc(s.omraade)}</td>
+      <td><select class="pille st-${esc(s.status)}" onchange="status('${esc(s.nr)}', this)">${statusValg(s.status)}</select></td>
+      <td>${esc(s.ansvarlig)}</td>
+      <td class="${s.overskredet ? 'rod' : ''}">${esc(s.frist)}</td>
+      <td class="tal">${s.mails}</td><td class="tal">${s.dok}</td><td class="tal">${s.timer}</td>
+      <td style="white-space:nowrap">
+        <button class="knap lys lille" onclick="kopier('[${esc(s.nr)}]')" title="Kopiér mail-tag">Tag</button>
+        <a class="knap lys lille" style="text-decoration:none;display:inline-block" target="_blank"
+           href="https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent('[' + s.nr + '] ' + s.titel)}">Ny mail</a>
+        <button class="knap lys lille" onclick="del('${esc(s.nr)}')">Del</button>
+      </td></tr>`).join('') || '<tr><td colspan="10" class="indlaes">Ingen sager matcher.</td></tr>';
+    byId('antal').textContent = rows.length + ' af ' + D.sager.length + ' sager';
+  }
+
+  function status(nr, sel) {
+    sel.disabled = true;
+    google.script.run.withSuccessHandler(() => { besked(`${esc(nr)} har nu status <b>${esc(sel.value)}</b>.`); hent(); })
+      .withFailureHandler(e => { sel.disabled = false; fejl(e); }).setStatus(nr, sel.value);
+  }
+
+  function del(nr) {
+    const email = prompt('Del ' + nr + ' med (e-mail på Google-konto).\nSkriv "intern:" foran for at dele hele sagen med en kollega, fx intern:kollega@firma.dk');
+    if (!email) return;
+    const intern = email.trim().toLowerCase().startsWith('intern:');
+    const adr = email.replace(/^intern:/i, '').trim();
+    google.script.run.withSuccessHandler(url => besked(`${esc(nr)} er delt med ${esc(adr)}. <a href="${esc(url)}" target="_blank">Åbn mappen</a>`))
+      .withFailureHandler(fejl).delSag(nr, adr, intern);
+  }
+
+  function opret(ev) {
+    ev.preventDefault();
+    const f = ev.target, knap = byId('opretKnap');
+    const data = Object.fromEntries(new FormData(f).entries());
+    knap.disabled = true; knap.textContent = 'Opretter sag…';
+    google.script.run.withSuccessHandler(r => {
+      knap.disabled = false; knap.textContent = 'Opret sag';
+      f.reset(); byId('ny-ansv').value = D ? D.bruger : '';
+      byId('ny-resultat').innerHTML = `<div class="besked">
+        <b>Sag ${esc(r.nr)} er oprettet.</b><br><br>
+        Mail-tag: <span class="tag">${esc(r.tag)}</span> <button class="knap lys lille" onclick="kopier('${esc(r.tag)}')">Kopiér</button><br>
+        Skriv tagget i emnefeltet på alle mails om sagen – så arkiveres de automatisk på sagen.<br><br>
+        <a href="${esc(r.mappeUrl)}" target="_blank">Åbn sagsmappen</a> · <a href="${esc(r.notatUrl)}" target="_blank">Åbn sagsnotat</a>
+        ${r.fejl && r.fejl.length ? `<br><br><span class="rod">Kunne ikke dele med: ${esc(r.fejl.join(', '))} (kræver Google-konto).</span>` : ''}
+      </div>`;
+      hent();
+    }).withFailureHandler(e => { knap.disabled = false; knap.textContent = 'Opret sag'; fejl(e); }).opretSag(data);
+  }
+
+  function rapport() {
+    const k = byId('rapportKnap'); k.disabled = true; k.textContent = 'Laver rapport…';
+    google.script.run.withSuccessHandler(url => {
+      k.disabled = false; k.textContent = 'Lav Slides-rapport';
+      besked(`Rapporten er klar: <a href="${esc(url)}" target="_blank">Åbn i Google Slides</a> (gemt i "02 Rapporter").`);
+    }).withFailureHandler(e => { k.disabled = false; k.textContent = 'Lav Slides-rapport'; fejl(e); }).lavRapport();
+  }
+
+  function kopier(t) {
+    const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove();
+    if (!ok && navigator.clipboard) navigator.clipboard.writeText(t).then(() => besked(`Kopieret: <span class="tag">${esc(t)}</span>`));
+    else besked(`Kopieret: <span class="tag">${esc(t)}</span>`);
+  }
+
+  hent();
+</script>
+</body>
+</html>

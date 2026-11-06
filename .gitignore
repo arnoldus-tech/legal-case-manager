@@ -1,0 +1,16 @@
+# clasp: project binding and login credentials are personal – never commit
+.clasp.json
+.clasprc.json
+
+# Data exports must never be committed (the register lives in Google Sheets)
+*.xlsx
+*.csv
+*.eml
+exports/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+node_modules/
