@@ -75,6 +75,8 @@ Dashboardet viser tiden pr. område (fordelt på mails og dokumentarbejde), pr. 
 
 ## Begrænsninger og alternativer
 
+- **Flere Google-konti i samme browser:** Er du logget ind på flere konti, kan dashboardet give fejlen *PERMISSION_DENIED*. Apps Script bruger browserens standardkonto. Brug en separat Chrome-profil (eller et inkognitovindue), hvor kun den konto, systemet kører på, er logget ind.
+
 - **Gmail-synk sker pr. bruger.** Hvert teammedlem skal aktivere den. Alternativt kan I sætte en fælles postkasse (fx `jura@firma.dk`) i cc på alle sagsmails og kun aktivere synk dér.
 - **Private gmail.com-konti** fungerer, men med Google Workspace (firmadomæne) får I delte drev, bedre adgangsstyring og mulighed for at begrænse deling til eget domæne. Det anbefales til fortrolige juridiske data.
 - **Fortrolighed/GDPR:** Mails og dokumenter ligger i Google. Vurdér, om det er i orden for jeres sagstyper (databehandleraftale med Google, dataplacering i EU).

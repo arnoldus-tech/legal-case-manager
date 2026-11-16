@@ -80,6 +80,10 @@ Prerequisites: a Google account, [Node.js](https://nodejs.org/) and [clasp](http
 
 End-user guide (Danish): [docs/VEJLEDNING.md](docs/VEJLEDNING.md)
 
+## Troubleshooting
+
+- **`PERMISSION_DENIED` when opening the dashboard** – you are signed in to several Google accounts in the same browser, and Apps Script uses the browser's default account. Use a separate browser profile (or an incognito window) signed in only to the account that runs the system.
+
 ## Privacy note
 
 All matter data stays in the user's own Google account/Workspace. The repository contains code only – no register data, no email, and no IDs. `.clasp.json` (script binding) and `.clasprc.json` (credentials) are git-ignored.
