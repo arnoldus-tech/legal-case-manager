@@ -3,16 +3,27 @@
  * Alle testsager har "TEST – " i feltet Klient/afdeling og kan fjernes igen med sletTestsager().
  */
 
+// Titler pr. områdekode. For områder med underområder er titlerne grupperet pr. underområde.
 const TEST_TITLER = {
-  KON: ['Leverandøraftale – IT-drift', 'Rammeaftale om rengøring', 'Forhandling af SaaS-licens', 'Samarbejdsaftale med distributør', 'Opsigelse af lejeaftale for printere'],
-  ANS: ['Afskedigelse – funktionær', 'Konkurrenceklausul ved fratræden', 'Opdatering af personalehåndbog', 'Sygefravær og § 56-aftale', 'Ansættelseskontrakt – direktør'],
-  SEL: ['Generalforsamling 2026', 'Kapitalforhøjelse i datterselskab', 'Ejeraftale – revision', 'Fusion af to datterselskaber', 'Registrering af ny direktion'],
-  GDPR: ['Databehandleraftale med lønsystem', 'Indsigtsanmodning fra medarbejder', 'Brud på persondatasikkerheden', 'Risikovurdering – ny CRM', 'Opdatering af privatlivspolitik'],
-  TVI: ['Inkasso – ubetalt faktura', 'Mangelsindsigelse fra kunde', 'Voldgiftssag – leverandør', 'Retssag om erstatning', 'Forligsforhandling – byggesag'],
-  EJD: ['Ny lejekontrakt – lager Aarhus', 'Tvist om istandsættelse ved fraflytning', 'Køb af erhvervsejendom', 'Servitutgennemgang', 'Fremleje af kontorlokaler'],
-  IP: ['Varemærkeregistrering EU', 'Licensaftale – software', 'Krænkelse af ophavsret på website', 'Domænenavnstvist', 'Fortrolighedsaftale (NDA) – partner'],
-  COM: ['Whistleblowerordning – årsgennemgang', 'Hvidvaskpolitik', 'ESG-rapportering', 'Sanktionsscreening af kunder', 'Antikorruptionspolitik'],
-  OVR: ['Generel juridisk rådgivning – marketing', 'Konkurrencebetingelser', 'Fuldmagter til ledelsen', 'Forsikringsgennemgang', 'Intern skabelonopdatering']
+  KAP: ['Selskabsmeddelelse – resultatforventninger', 'Insiderliste – opkøbsprojekt', 'Aktietilbagekøbsprogram 2026', 'Udskydelse af offentliggørelse (MAR art. 17)', 'Ledende medarbejderes transaktioner'],
+  SEL: ['Kapitalforhøjelse i datterselskab', 'Likvidation af dormant selskab', 'Ny tegningsregel – datterselskaber', 'Koncerngaranti til bank', 'Fusion af to datterselskaber'],
+  GOV: ['Generalforsamling 2027 – dagsorden', 'Vederlagsrapport 2026', 'Opdatering af bestyrelsens forretningsorden', 'Bestyrelsesevaluering', 'Redegørelse for god selskabsledelse'],
+  MA: ['Opkøb af softwarevirksomhed – DD', 'Joint venture i Polen', 'Frasalg af forretningsområde', 'LOI – opkøbsmål i Tyskland', 'Integration efter opkøb'],
+  KOM: {
+    'Salg (penge ind)': ['Kundekontrakt – forsvarsministerium', 'Tilbud på offentligt udbud', 'Distributøraftale – Norden', 'Standard salgs- og leveringsbetingelser', 'Garantikrav fra kunde'],
+    'Indkøb (penge ud)': ['Rammeaftale med underleverandør', 'Konsulentaftale – projektledelse', 'Ny lejekontrakt – lager Aarhus', 'Leverandøraftale – elektronikkomponenter', 'Opdatering af købsbetingelser'],
+    'Samarbejde & NDA': ['NDA – potentiel partner', 'Teamingaftale – konsortium', 'MoU om industrisamarbejde', 'Samarbejdsaftale med universitet', 'NDA – leverandørdialog']
+  },
+  IT: ['SaaS-aftale – nyt HR-system', 'Cloud-migrering – kontraktvilkår', 'Outsourcing af IT-drift', 'Licensrevision – Microsoft', 'Implementeringsaftale ERP'],
+  IP: ['Patentansøgning – radarteknologi', 'Varemærkeregistrering EU', 'Licens af egen teknologi', 'Krænkelse af varemærke', 'Opfinderaftale med medarbejder'],
+  ANS: ['Fratrædelse – funktionær', 'Direktørkontrakt', 'Incitamentsprogram – warrants', 'Konkurrenceklausul ved fratræden', 'Opdatering af personalehåndbog'],
+  GDPR: ['Databehandleraftale med lønsystem', 'Brud på persondatasikkerheden', 'Konsekvensanalyse – ny CRM', 'Indsigtsanmodning fra medarbejder', 'NIS2-gapanalyse'],
+  EKS: ['Eksportlicens – leverance til Asien', 'Dual-use-klassificering af produkt', 'ITAR-vurdering af komponent', 'Sanktionsscreening af ny kunde', 'Intern eksportkontrolprocedure'],
+  COM: ['Whistleblowerindberetning', 'Antikorruptionspolitik – opdatering', 'Intern undersøgelse – rejseudgifter', 'Agentscreening (due diligence)', 'Code of conduct – leverandører'],
+  KONK: ['Samarbejde med konkurrent om udbud', 'Fusionsanmeldelse', 'Brancheforeningsmøde – retningslinjer', 'Eksklusivitetsklausul – vurdering', 'Beredskab ved kontrolbesøg'],
+  ESG: ['CSRD – dobbelt væsentlighedsvurdering', 'Due diligence i forsyningskæden', 'Grønne udsagn i markedsføring', 'Klimamål – juridisk vurdering', 'Menneskerettighedspolitik'],
+  TVI: ['Reklamation fra kunde', 'Erstatningskrav mod leverandør', 'Inkasso – ubetalt faktura', 'Forligsforhandling', 'Forsikringskrav – skade på lager'],
+  OVR: ['Generel rådgivning – marketing', 'Fuldmagter til ledelsen', 'Forsikringsgennemgang', 'Skabelonopdatering', 'Juridisk input til årsrapport']
 };
 const TEST_AFD = ['Indkøb', 'HR', 'Salg', 'Økonomi', 'Ledelse', 'IT', 'Marketing', 'Ejendomme'];
 const TEST_MODPART = ['NordLog A/S', 'Bygma Partner ApS', 'DataSikker ApS', 'Kunde X A/S', 'Advokatfirmaet Holm', '', '', ''];
@@ -30,6 +41,9 @@ function opretTestsager() {
   for (let i = 0; i < 20; i++) {
     if (Date.now() - start > 4.5 * 60 * 1000) break;   // undgå Apps Scripts 6-minutters grænse
     const o = pick(omr);
+    const under = o.under.length ? pick(o.under) : '';
+    const kilde = TEST_TITLER[o.kode] || TEST_TITLER.OVR;
+    const titel = pick(Array.isArray(kilde) ? kilde : (kilde[under] || Object.values(kilde)[0]));
     const r = Math.random();
     const status = r < 0.10 ? 'Ny' : r < 0.60 ? 'Åben' : r < 0.75 ? 'Afventer' : 'Lukket';
     const alder = 5 + Math.floor(Math.random() * 350);                      // oprettet 5–355 dage siden
@@ -38,7 +52,7 @@ function opretTestsager() {
     const frist = status === 'Lukket' ? '' : fmt_(dagSiden(-Math.floor(Math.random() * 60) + 10));   // nogle overskredne
 
     const res = opretSag({
-      titel: pick(TEST_TITLER[o.kode] || TEST_TITLER.OVR), omraade: o.navn, status: status,
+      titel: titel, omraade: o.navn, underomraade: under, status: status,
       prioritet: pick(['Høj', 'Normal', 'Normal', 'Lav']), klient: 'TEST – ' + pick(TEST_AFD),
       modpart: pick(TEST_MODPART), frist: frist, beskrivelse: 'Testsag oprettet automatisk.'
     });
@@ -93,4 +107,23 @@ function sletTestsager() {
   }
   try { SpreadsheetApp.getUi().alert(test.length + ' testsager er fjernet (mapperne ligger i papirkurven).'); }
   catch (e) { console.log(test.length + ' testsager fjernet.'); }
+}
+
+/**
+ * Erstatter fanen Områder med standardlisten (DEFAULT_OMR). Mappe-ID'er bevares for områder,
+ * der hedder det samme som før. Eksisterende sager beholder deres gamle områdenavn.
+ */
+function nulstilOmraader() {
+  const sh = sh_(SH.OMR);
+  const gamle = {};
+  omraader_().forEach(o => gamle[o.navn] = o);
+  const raekker = standardOmraadeRaekker_().map(r => {
+    const g = gamle[r[0]];
+    return g && g.mappeId ? [r[0], r[1], g.mappeId, sh.getRange(g.row, 4).getValue(), r[4]] : r;
+  });
+  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, Math.max(sh.getLastColumn(), OMR_COLS.length)).clearContent();
+  skrivOverskrifter_(sh, OMR_COLS);
+  sh.getRange(2, 1, raekker.length, OMR_COLS.length).setValues(raekker);
+  try { SpreadsheetApp.getUi().alert('Områderne er sat til standardlisten (' + raekker.length + ' områder).'); }
+  catch (e) { console.log('Områder nulstillet.'); }
 }

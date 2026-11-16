@@ -82,6 +82,7 @@
     <div class="kpi" id="kpi"><div class="indlaes">Henter data…</div></div>
     <div class="gitter">
       <div class="kort"><h2>Fordeling på sagsområder</h2><p class="under">Alle sager</p><div id="d-omr" class="diagram"></div></div>
+      <div class="kort"><h2>Kommercielle aftaler: penge ind og ud</h2><p class="under">Sager og estimerede timer pr. underområde</p><div id="d-under" class="diagram"></div></div>
       <div class="kort"><h2>Hvad bruges tiden på?</h2><p class="under">Estimerede timer pr. område, opdelt på mails og dokumentarbejde</p><div id="d-tid" class="diagram"></div></div>
       <div class="kort"><h2>Tid fordelt på aktivitetstype</h2><p class="under">Estimerede timer i alt</p><div id="d-typer" class="diagram"></div></div>
       <div class="kort"><h2>Oprettede og lukkede sager</h2><p class="under">Seneste 12 måneder</p><div id="d-mdr" class="diagram"></div></div>
@@ -128,13 +129,13 @@
   <section class="vis" id="vis-ny">
     <form class="ny" id="nyForm" onsubmit="opret(event)">
       <label class="bred">Titel *<input name="titel" required placeholder="Fx Leverandøraftale med NordLog A/S"></label>
-      <label>Sagsområde *<select name="omraade" id="ny-omr" required></select></label>
+      <label>Sagsområde *<select name="omraade" id="ny-omr" required onchange="visUnder()"></select></label>
+      <label id="ny-under-felt" style="display:none">Underområde *<select name="underomraade" id="ny-under"></select></label>
       <label>Status<select name="status"><option>Ny</option><option selected>Åben</option><option>Afventer</option></select></label>
       <label>Prioritet<select name="prioritet"><option>Høj</option><option selected>Normal</option><option>Lav</option></select></label>
       <label>Frist<input type="date" name="frist"></label>
       <label>Ansvarlig (e-mail)<input type="email" name="ansvarlig" id="ny-ansv"></label>
       <label>Klient / afdeling<input name="klient" placeholder="Fx Indkøb"></label>
-      <label>Modpart<input name="modpart"></label>
       <label>Team (e-mails, komma-separeret)<input name="team" placeholder="kollega@firma.dk, …"></label>
       <label class="bred">Eksterne (e-mails – får kun adgang til mappen "03 Delt med eksterne")<input name="eksterne" placeholder="advokat@ekstern.dk"></label>
       <label class="bred">Beskrivelse<textarea name="beskrivelse" placeholder="Kort beskrivelse af sagen, baggrund og ønsket resultat"></textarea></label>
@@ -178,12 +179,22 @@
 
   function udfyldValg() {
     const opt = (arr) => arr.map(x => `<option>${esc(x)}</option>`).join('');
-    document.getElementById('ny-omr').innerHTML = opt(D.omrNavne);
+    const nyOmr = document.getElementById('ny-omr'), glOmr = nyOmr.value;
+    nyOmr.innerHTML = opt(D.omrNavne); if (glOmr) nyOmr.value = glOmr;
+    visUnder();
     document.getElementById('f-omr').innerHTML = '<option value="">Alle områder</option>' + opt(D.omrNavne);
     const ansv = [...new Set(D.sager.map(s => s.ansvarlig).filter(Boolean))].sort();
     const fa = document.getElementById('f-ansv'), gl = fa.value;
     fa.innerHTML = '<option value="">Alle ansvarlige</option>' + opt(ansv); fa.value = gl;
     const na = document.getElementById('ny-ansv'); if (!na.value) na.value = D.bruger || '';
+  }
+
+  function visUnder() {
+    const navn = byId('ny-omr').value, liste = (D && D.omrUnder && D.omrUnder[navn]) || [];
+    const felt = byId('ny-under-felt'), sel = byId('ny-under');
+    felt.style.display = liste.length ? '' : 'none';
+    sel.required = !!liste.length;
+    sel.innerHTML = liste.length ? '<option value="">Vælg…</option>' + liste.map(u => `<option>${esc(u)}</option>`).join('') : '';
   }
 
   function tegnKpi() {
@@ -198,6 +209,13 @@
     const V = google.visualization;
     const basis = { chartArea: { left: 10, top: 10, width: '95%', height: '85%' }, colors: FARVER, fontName: 'Segoe UI', legend: { position: 'right' } };
     const omr = D.omraader.filter(o => o.total > 0);
+
+    // Underområder (penge ind / penge ud)
+    const uf = D.underfordeling || [];
+    const dU = V.arrayToDataTable([['Underområde', 'Sager', 'Timer']].concat(uf.map(u => [u.under, u.sager, u.timer])));
+    tom('d-under', uf.length) || new V.BarChart(byId('d-under')).draw(dU, Object.assign({}, basis, {
+      colors: ['#1f4e79', '#f2a541'], legend: { position: 'bottom' }, chartArea: { left: 170, top: 10, width: '65%', height: '75%' },
+      hAxis: { minValue: 0 } }));
 
     // Fordeling på område
     const d1 = V.arrayToDataTable([['Område','Sager']].concat(omr.map(o => [o.navn, o.total])));
@@ -247,7 +265,7 @@
     byId('t-sager').innerHTML = rows.map(s => `<tr>
       <td><a href="${esc(s.mappe)}" target="_blank"><b>${esc(s.nr)}</b></a></td>
       <td>${esc(s.titel)}${s.klient ? `<br><span style="color:var(--dæmpet);font-size:12px">${esc(s.klient)}${s.modpart ? ' / ' + esc(s.modpart) : ''}</span>` : ''}</td>
-      <td>${esc(s.omraade)}</td>
+      <td>${esc(s.omraade)}${s.under ? `<br><span style="color:var(--dæmpet);font-size:12px">${esc(s.under)}</span>` : ''}</td>
       <td><select class="pille st-${esc(s.status)}" onchange="status('${esc(s.nr)}', this)">${statusValg(s.status)}</select></td>
       <td>${esc(s.ansvarlig)}</td>
       <td class="${s.overskredet ? 'rod' : ''}">${esc(s.frist)}</td>
@@ -283,7 +301,7 @@
     knap.disabled = true; knap.textContent = 'Opretter sag…';
     google.script.run.withSuccessHandler(r => {
       knap.disabled = false; knap.textContent = 'Opret sag';
-      f.reset(); byId('ny-ansv').value = D ? D.bruger : '';
+      f.reset(); byId('ny-ansv').value = D ? D.bruger : ''; visUnder();
       byId('ny-resultat').innerHTML = `<div class="besked">
         <b>Sag ${esc(r.nr)} er oprettet.</b><br><br>
         Mail-tag: <span class="tag">${esc(r.tag)}</span> <button class="knap lys lille" onclick="kopier('${esc(r.tag)}')">Kopiér</button><br>

@@ -31,9 +31,9 @@ const SH = { SAGER: 'Sager', OMR: 'Områder', AKT: 'Aktivitet', IND: 'Indstillin
 
 const COLS = ['Sagsnr', 'Titel', 'Område', 'Status', 'Prioritet', 'Ansvarlig', 'Team', 'Eksterne',
   'Klient/afdeling', 'Modpart', 'Oprettet', 'Frist', 'Lukket', 'Mappe', 'Mappe-ID', 'Beskrivelse',
-  'Mails', 'Dokumenter', 'Est. timer', 'Sidst synk'];
+  'Mails', 'Dokumenter', 'Est. timer', 'Sidst synk', 'Underområde'];
 const AKT_COLS = ['Tidspunkt', 'Sagsnr', 'Område', 'Type', 'Titel', 'Person', 'Link', 'Minutter', 'Nøgle', 'Kilde'];
-const OMR_COLS = ['Område', 'Kode', 'Mappe-ID', 'Mappe'];
+const OMR_COLS = ['Område', 'Kode', 'Mappe-ID', 'Mappe', 'Underområder'];
 
 const STATUSER = ['Ny', 'Åben', 'Afventer', 'Lukket'];
 const PRIORITETER = ['Høj', 'Normal', 'Lav'];
@@ -41,11 +41,29 @@ const AKT_TYPER = ['Mail ind', 'Mail ud', 'Dokument oprettet', 'Dokument rediger
 
 const UNDERMAPPER = { MAIL: '01 Korrespondance', DOK: '02 Dokumenter', EKST: '03 Delt med eksterne' };
 
+/**
+ * Standardområder for en juridisk afdeling i et børsnoteret selskab: [navn, kode, underområder].
+ * Underområder vælges på sagen; for kommercielle aftaler skelnes mellem penge ind og penge ud.
+ */
 const DEFAULT_OMR = [
-  ['Kontraktret', 'KON'], ['Ansættelsesret', 'ANS'], ['Selskabsret', 'SEL'],
-  ['Persondata & GDPR', 'GDPR'], ['Tvister & retssager', 'TVI'], ['Fast ejendom', 'EJD'],
-  ['IP & teknologi', 'IP'], ['Compliance & regulering', 'COM'], ['Øvrigt', 'OVR']
+  ['Kapitalmarked & børsret', 'KAP', ''],
+  ['Selskabsret', 'SEL', ''],
+  ['Governance', 'GOV', ''],
+  ['M&A & transaktioner', 'MA', ''],
+  ['Kommercielle aftaler', 'KOM', 'Salg (penge ind), Indkøb (penge ud), Samarbejde & NDA'],
+  ['IT & teknologi', 'IT', ''],
+  ['Immaterielle rettigheder', 'IP', ''],
+  ['Ansættelse & HR', 'ANS', ''],
+  ['Persondata & informationssikkerhed', 'GDPR', ''],
+  ['Eksportkontrol & sanktioner', 'EKS', ''],
+  ['Compliance & etik', 'COM', ''],
+  ['Konkurrenceret', 'KONK', ''],
+  ['ESG & bæredygtighed', 'ESG', ''],
+  ['Tvister & krav', 'TVI', ''],
+  ['Generel rådgivning', 'OVR', '']
 ];
+/** DEFAULT_OMR som rækker til fanen Områder (Mappe-ID og Mappe udfyldes ved første sag). */
+function standardOmraadeRaekker_() { return DEFAULT_OMR.map(o => [o[0], o[1], '', '', o[2]]); }
 
 const IND = {
   MIN_MAIL_IND: 'Minutter pr. indgående mail',
@@ -102,7 +120,8 @@ function onOpen() {
     .addItem('Opsætning (kør første gang)', 'opsaetning')
     .addSubMenu(ui.createMenu('Demo')
       .addItem('Opret 20 testsager', 'opretTestsager')
-      .addItem('Slet testsager', 'sletTestsager'))
+      .addItem('Slet testsager', 'sletTestsager')
+      .addItem('Nulstil områder til standardlisten', 'nulstilOmraader'))
     .addToUi();
 }
 
@@ -124,7 +143,7 @@ function opsaetning() {
 
   const omr = hentEllerOpret_(SH.OMR);
   skrivOverskrifter_(omr, OMR_COLS);
-  if (omr.getLastRow() < 2) omr.getRange(2, 1, DEFAULT_OMR.length, 2).setValues(DEFAULT_OMR);
+  if (omr.getLastRow() < 2) omr.getRange(2, 1, DEFAULT_OMR.length, OMR_COLS.length).setValues(standardOmraadeRaekker_());
   omraader_().forEach(sikrOmraadeMappe_);
 
   const akt = hentEllerOpret_(SH.AKT);
@@ -211,6 +230,7 @@ function opretSag(d) {
   if (!d.titel || !d.omraade) throw new Error('Titel og område skal udfyldes.');
   const omr = omraader_().find(o => o.navn === d.omraade);
   if (!omr) throw new Error('Ukendt område: ' + d.omraade);
+  if (omr.under.length && omr.under.indexOf(d.underomraade) < 0) throw new Error('Vælg et underområde for ' + omr.navn + '.');
 
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -249,7 +269,7 @@ function opretSag(d) {
       'Eksterne': d.eksterne || '', 'Klient/afdeling': d.klient || '', 'Modpart': d.modpart || '',
       'Oprettet': nu, 'Frist': d.frist ? new Date(d.frist) : '', 'Lukket': '',
       'Mappe': mappe.getUrl(), 'Mappe-ID': mappe.getId(), 'Beskrivelse': d.beskrivelse || '',
-      'Mails': 0, 'Dokumenter': 0, 'Est. timer': 0, 'Sidst synk': ''
+      'Mails': 0, 'Dokumenter': 0, 'Est. timer': 0, 'Sidst synk': '', 'Underområde': omr.under.length ? d.underomraade : ''
     };
     sh_(SH.SAGER).appendRow(COLS.map(c => o[c]));
     sh_(SH.AKT).appendRow([nu, nr, omr.navn, 'Oprettet', 'Sag oprettet: ' + d.titel, ansvarlig, mappe.getUrl(), 0, '']);
@@ -741,7 +761,10 @@ function getDashboardData() {
   const akt = tabel_(SH.AKT).rows;
   const idag = new Date(); idag.setHours(0, 0, 0, 0);
   const d30 = new Date(idag.getTime() - 30 * 864e5);
-  const omrNavne = omraader_().map(o => o.navn);
+  const omrListe = omraader_();
+  const omrNavne = omrListe.map(o => o.navn);
+  const omrUnder = {};
+  omrListe.forEach(o => { if (o.under.length) omrUnder[o.navn] = o.under; });
 
   const k = { total: sager.length, aabne: 0, lukkede: 0, nye: 0, afventer: 0, overskredet: 0, oprettet30: 0, lukket30: 0, timer: 0 };
   const omr = {};
@@ -797,7 +820,7 @@ function getDashboardData() {
   });
 
   const liste = sager.map(s => ({
-    nr: s['Sagsnr'], titel: s['Titel'], omraade: s['Område'], status: s['Status'], prioritet: s['Prioritet'],
+    nr: s['Sagsnr'], titel: s['Titel'], omraade: s['Område'], under: s['Underområde'] || '', status: s['Status'], prioritet: s['Prioritet'],
     ansvarlig: s['Ansvarlig'], klient: s['Klient/afdeling'], modpart: s['Modpart'],
     oprettet: fmt_(s['Oprettet']), frist: fmt_(s['Frist']), lukket: fmt_(s['Lukket']),
     mappe: s['Mappe'], mails: Number(s['Mails']) || 0, dok: Number(s['Dokumenter']) || 0,
@@ -805,12 +828,23 @@ function getDashboardData() {
     overskredet: !!(s['Frist'] && s['Status'] !== 'Lukket' && new Date(s['Frist']) < idag)
   }));
 
+  // Fordeling på underområder (fx Kommercielle aftaler: penge ind / penge ud): sager og timer
+  const underfordeling = [];
+  Object.keys(omrUnder).forEach(navn => {
+    omrUnder[navn].concat(['(ikke angivet)']).forEach(u => {
+      const her = liste.filter(s => s.omraade === navn && (s.under || '(ikke angivet)') === u);
+      if (her.length) underfordeling.push({ omraade: navn, under: u, sager: her.length,
+        timer: Math.round(her.reduce((t, s) => t + s.timer, 0) * 10) / 10 });
+    });
+  });
+
   let webUrl = '';
   try { webUrl = ScriptApp.getService().getUrl() || ''; } catch (e) { /* ikke udrullet */ }
 
   return {
     k: k, omraader: Object.keys(omr).map(n => omr[n]), typer: typer, maaneder: mdr,
     ansvarlig: Object.keys(ansvarlig).map(a => ({ navn: a, antal: ansvarlig[a] })).sort((a, b) => b.antal - a.antal),
+    underfordeling: underfordeling, omrUnder: omrUnder,
     sager: liste, omrNavne: omrNavne, statuser: STATUSER, prioriteter: PRIORITETER, aktTyper: AKT_TYPER,
     bruger: Session.getActiveUser().getEmail(), webUrl: webUrl, opdateret: fmt_(new Date(), 'yyyy-MM-dd HH:mm')
   };
@@ -976,7 +1010,7 @@ function sikrFaner_(ss) {
   if (!ss.getSheetByName(SH.OMR)) {
     const o = ss.insertSheet(SH.OMR);
     skrivOverskrifter_(o, OMR_COLS);
-    o.getRange(2, 1, DEFAULT_OMR.length, 2).setValues(DEFAULT_OMR);
+    o.getRange(2, 1, DEFAULT_OMR.length, OMR_COLS.length).setValues(standardOmraadeRaekker_());
   }
   if (!ss.getSheetByName(SH.AKT)) skrivOverskrifter_(ss.insertSheet(SH.AKT), AKT_COLS);
   if (!ss.getSheetByName(SH.IND)) {
@@ -1029,8 +1063,9 @@ function indstillinger_() {
 function omraader_() {
   const sh = sh_(SH.OMR);
   if (!sh || sh.getLastRow() < 2) return [];
-  return sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues()
-    .map((r, i) => ({ navn: String(r[0]).trim(), kode: String(r[1]).trim().toUpperCase(), mappeId: r[2], row: i + 2 }))
+  return sh.getRange(2, 1, sh.getLastRow() - 1, OMR_COLS.length).getValues()
+    .map((r, i) => ({ navn: String(r[0]).trim(), kode: String(r[1]).trim().toUpperCase(), mappeId: r[2], row: i + 2,
+      under: String(r[4] || '').split(',').map(x => x.trim()).filter(String) }))
     .filter(o => o.navn && o.kode);
 }
 
