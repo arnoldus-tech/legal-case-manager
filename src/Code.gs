@@ -43,14 +43,14 @@ const UNDERMAPPER = { MAIL: '01 Korrespondance', DOK: '02 Dokumenter', EKST: '03
 
 /**
  * Standardområder for en juridisk afdeling i et børsnoteret selskab: [navn, kode, underområder].
- * Underområder vælges på sagen; for kommercielle aftaler skelnes mellem penge ind og penge ud.
+ * Underområder vælges på sagen; for kommercielle aftaler skelnes mellem salg og indkøb.
  */
 const DEFAULT_OMR = [
   ['Kapitalmarked & børsret', 'KAP', ''],
   ['Selskabsret', 'SEL', ''],
   ['Governance', 'GOV', ''],
   ['M&A & transaktioner', 'MA', ''],
-  ['Kommercielle aftaler', 'KOM', 'Salg (penge ind), Indkøb (penge ud), Samarbejde & NDA'],
+  ['Kommercielle aftaler', 'KOM', 'Salg, Indkøb, Samarbejde & NDA'],
   ['IT & teknologi', 'IT', ''],
   ['Immaterielle rettigheder', 'IP', ''],
   ['Ansættelse & HR', 'ANS', ''],
@@ -828,7 +828,7 @@ function getDashboardData() {
     overskredet: !!(s['Frist'] && s['Status'] !== 'Lukket' && new Date(s['Frist']) < idag)
   }));
 
-  // Fordeling på underområder (fx Kommercielle aftaler: penge ind / penge ud): sager og timer
+  // Fordeling på underområder (fx Kommercielle aftaler: salg / indkøb): sager og timer
   const underfordeling = [];
   Object.keys(omrUnder).forEach(navn => {
     omrUnder[navn].concat(['(ikke angivet)']).forEach(u => {

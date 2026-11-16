@@ -82,7 +82,7 @@
     <div class="kpi" id="kpi"><div class="indlaes">Henter data…</div></div>
     <div class="gitter">
       <div class="kort"><h2>Fordeling på sagsområder</h2><p class="under">Alle sager</p><div id="d-omr" class="diagram"></div></div>
-      <div class="kort"><h2>Kommercielle aftaler: penge ind og ud</h2><p class="under">Sager og estimerede timer pr. underområde</p><div id="d-under" class="diagram"></div></div>
+      <div class="kort"><h2>Kommercielle aftaler: salg og indkøb</h2><p class="under">Sager og estimerede timer pr. underområde</p><div id="d-under" class="diagram"></div></div>
       <div class="kort"><h2>Hvad bruges tiden på?</h2><p class="under">Estimerede timer pr. område, opdelt på mails og dokumentarbejde</p><div id="d-tid" class="diagram"></div></div>
       <div class="kort"><h2>Tid fordelt på aktivitetstype</h2><p class="under">Estimerede timer i alt</p><div id="d-typer" class="diagram"></div></div>
       <div class="kort"><h2>Oprettede og lukkede sager</h2><p class="under">Seneste 12 måneder</p><div id="d-mdr" class="diagram"></div></div>
@@ -210,7 +210,7 @@
     const basis = { chartArea: { left: 10, top: 10, width: '95%', height: '85%' }, colors: FARVER, fontName: 'Segoe UI', legend: { position: 'right' } };
     const omr = D.omraader.filter(o => o.total > 0);
 
-    // Underområder (penge ind / penge ud)
+    // Underområder (fx salg / indkøb)
     const uf = D.underfordeling || [];
     const dU = V.arrayToDataTable([['Underområde', 'Sager', 'Timer']].concat(uf.map(u => [u.under, u.sager, u.timer])));
     tom('d-under', uf.length) || new V.BarChart(byId('d-under')).draw(dU, Object.assign({}, basis, {

@@ -10,8 +10,8 @@ const TEST_TITLER = {
   GOV: ['Generalforsamling 2027 – dagsorden', 'Vederlagsrapport 2026', 'Opdatering af bestyrelsens forretningsorden', 'Bestyrelsesevaluering', 'Redegørelse for god selskabsledelse'],
   MA: ['Opkøb af softwarevirksomhed – DD', 'Joint venture i Polen', 'Frasalg af forretningsområde', 'LOI – opkøbsmål i Tyskland', 'Integration efter opkøb'],
   KOM: {
-    'Salg (penge ind)': ['Kundekontrakt – forsvarsministerium', 'Tilbud på offentligt udbud', 'Distributøraftale – Norden', 'Standard salgs- og leveringsbetingelser', 'Garantikrav fra kunde'],
-    'Indkøb (penge ud)': ['Rammeaftale med underleverandør', 'Konsulentaftale – projektledelse', 'Ny lejekontrakt – lager Aarhus', 'Leverandøraftale – elektronikkomponenter', 'Opdatering af købsbetingelser'],
+    'Salg': ['Kundekontrakt – forsvarsministerium', 'Tilbud på offentligt udbud', 'Distributøraftale – Norden', 'Standard salgs- og leveringsbetingelser', 'Garantikrav fra kunde'],
+    'Indkøb': ['Rammeaftale med underleverandør', 'Konsulentaftale – projektledelse', 'Ny lejekontrakt – lager Aarhus', 'Leverandøraftale – elektronikkomponenter', 'Opdatering af købsbetingelser'],
     'Samarbejde & NDA': ['NDA – potentiel partner', 'Teamingaftale – konsortium', 'MoU om industrisamarbejde', 'Samarbejdsaftale med universitet', 'NDA – leverandørdialog']
   },
   IT: ['SaaS-aftale – nyt HR-system', 'Cloud-migrering – kontraktvilkår', 'Outsourcing af IT-drift', 'Licensrevision – Microsoft', 'Implementeringsaftale ERP'],
