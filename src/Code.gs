@@ -27,9 +27,6 @@ const CFG = {
 /** Mapper, som opsætningen sikrer findes i rodmappen. Nøgle = Script Property. */
 const MAPPER = { SAGER_FOLDER_ID: '01 Sager', RAPPORT_FOLDER_ID: '02 Rapporter', SKABELON_FOLDER_ID: '03 Skabeloner' };
 
-/** Faner i regnearket, som koden aldrig må læse, ændre eller eksportere. */
-const BESKYTTEDE_FANER = ['Til Claude', 'Afsendere'];
-
 const SH = { SAGER: 'Sager', OMR: 'Områder', AKT: 'Aktivitet', IND: 'Indstillinger', RAP: 'Rapportdata' };
 
 const COLS = ['Sagsnr', 'Titel', 'Område', 'Status', 'Prioritet', 'Ansvarlig', 'Team', 'Eksterne',
@@ -957,7 +954,6 @@ function ss_() {
 }
 
 function sh_(navn) {
-  if (BESKYTTEDE_FANER.indexOf(navn) >= 0) throw new Error('Fanen "' + navn + '" er beskyttet og må ikke bruges af systemet.');
   const ss = ss_();
   let sh = ss.getSheetByName(navn);
   if (!sh) { sikrFaner_(ss); sh = ss.getSheetByName(navn); }
@@ -968,8 +964,7 @@ function sh_(navn) {
 function sikrFaner_(ss) {
   if (!ss.getSheetByName(SH.SAGER)) {
     const forste = ss.getSheets()[0];
-    const kanOmdoebes = BESKYTTEDE_FANER.indexOf(forste.getName()) < 0 &&
-      (forste.getRange(1, 1).getValue() === 'Sagsnr' || forste.getLastRow() === 0);
+    const kanOmdoebes = forste.getRange(1, 1).getValue() === 'Sagsnr' || forste.getLastRow() === 0;
     if (kanOmdoebes) forste.setName(SH.SAGER);
     else ss.insertSheet(SH.SAGER);
     skrivOverskrifter_(ss.getSheetByName(SH.SAGER), COLS);

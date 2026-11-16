@@ -1,5 +1,6 @@
 # clasp: project binding and login credentials are personal – never commit
 .clasp.json
+.clasp.*.json
 .clasprc.json
 
 # Data exports must never be committed (the register lives in Google Sheets)

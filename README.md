@@ -47,7 +47,6 @@ Web app (HtmlService + Google Charts): dashboard, matter list, intake form
 - **Staged reading.** New emails are classified from headers only (subject, addresses, thread references). The body is fetched only when an email is filed. Threads labelled `Privat`, excluded domains and newsletters/automated mail are skipped.
 - **Private by default.** The "Unfiled" queue is stored in each user's own User Properties, never in the shared register.
 - **No hard-coded IDs.** Setup discovers or creates the folder structure and stores IDs in Script Properties, so the code can be deployed to any Drive.
-- **Protected tabs.** Sheet tabs listed in `BESKYTTEDE_FANER` are never read, modified or exported by the code.
 - **Estimates are labelled as estimates** – everywhere they are shown.
 
 ## Roadmap
