@@ -12,10 +12,15 @@ const TEST_TITLER = {
   KOM: {
     'Salg': ['Kundekontrakt – forsvarsministerium', 'Tilbud på offentligt udbud', 'Distributøraftale – Norden', 'Standard salgs- og leveringsbetingelser', 'Garantikrav fra kunde'],
     'Indkøb': ['Rammeaftale med underleverandør', 'Konsulentaftale – projektledelse', 'Ny lejekontrakt – lager Aarhus', 'Leverandøraftale – elektronikkomponenter', 'Opdatering af købsbetingelser'],
-    'Samarbejde & NDA': ['NDA – potentiel partner', 'Teamingaftale – konsortium', 'MoU om industrisamarbejde', 'Samarbejdsaftale med universitet', 'NDA – leverandørdialog']
+    'Samarbejde': ['Teamingaftale – konsortium', 'MoU om industrisamarbejde', 'Samarbejdsaftale med universitet', 'Partnerskabsaftale – udviklingsprojekt', 'Konsortieaftale – EU-projekt']
   },
   IT: ['SaaS-aftale – nyt HR-system', 'Cloud-migrering – kontraktvilkår', 'Outsourcing af IT-drift', 'Licensrevision – Microsoft', 'Implementeringsaftale ERP'],
-  IP: ['Patentansøgning – radarteknologi', 'Varemærkeregistrering EU', 'Licens af egen teknologi', 'Krænkelse af varemærke', 'Opfinderaftale med medarbejder'],
+  IP: {
+    'Patenter & design': ['Patentansøgning – radarteknologi', 'Opfinderaftale med medarbejder', 'Designregistrering – ny produktlinje'],
+    'Varemærker & domæner': ['Varemærkeregistrering EU', 'Krænkelse af varemærke', 'Domænenavnstvist'],
+    'Licenser & know-how': ['Licens af egen teknologi', 'Know-how-overdragelse til datterselskab', 'Licensaftale – softwaremodul'],
+    'NDA': ['NDA – potentiel partner', 'NDA – leverandørdialog', 'NDA – opkøbsmål', 'Gensidig NDA – kunde']
+  },
   ANS: ['Fratrædelse – funktionær', 'Direktørkontrakt', 'Incitamentsprogram – warrants', 'Konkurrenceklausul ved fratræden', 'Opdatering af personalehåndbog'],
   GDPR: ['Databehandleraftale med lønsystem', 'Brud på persondatasikkerheden', 'Konsekvensanalyse – ny CRM', 'Indsigtsanmodning fra medarbejder', 'NIS2-gapanalyse'],
   EKS: ['Eksportlicens – leverance til Asien', 'Dual-use-klassificering af produkt', 'ITAR-vurdering af komponent', 'Sanktionsscreening af ny kunde', 'Intern eksportkontrolprocedure'],
