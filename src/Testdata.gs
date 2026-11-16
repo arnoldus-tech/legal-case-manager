@@ -32,6 +32,10 @@ const TEST_TITLER = {
 };
 const TEST_AFD = ['Indkøb', 'HR', 'Salg', 'Økonomi', 'Ledelse', 'IT', 'Marketing', 'Ejendomme'];
 const TEST_MODPART = ['NordLog A/S', 'Bygma Partner ApS', 'DataSikker ApS', 'Kunde X A/S', 'Advokatfirmaet Holm', '', '', ''];
+/** Fiktive eksterne afsendere til demomails (example.com/.dk-domæner bruges kun som eksempler). */
+const TEST_KONTAKTER = ['jens.holm@advokat-holm.example.dk', 'contracts@nordlog.example.com', 'legal@datasikker.example.dk',
+  'indkob@kunde-x.example.com', 'mette.lund@partner.example.dk'];
+const TEST_VEDH = ['', '', '', 'Udkast_v2.docx', 'Kontrakt_endelig.pdf', 'Bilag 1 - Specifikation.pdf', 'Kommentarer.docx'];
 
 function opretTestsager() {
   const start = Date.now();
@@ -40,7 +44,8 @@ function opretTestsager() {
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const nu = new Date();
   const dagSiden = n => new Date(nu.getTime() - n * 864e5);
-  const aktRows = [];
+  const aktRows = [], mailRows = [];
+  const mig = Session.getEffectiveUser().getEmail();
   let antal = 0;
 
   for (let i = 0; i < 20; i++) {
@@ -70,9 +75,18 @@ function opretTestsager() {
     // Simuleret aktivitet mellem oprettelse og lukning/i dag
     const slut = lukket ? lukket.getTime() : nu.getTime();
     const tid = () => new Date(oprettet.getTime() + Math.random() * (slut - oprettet.getTime()));
+    // Demomails fordeles på 1–3 tråde pr. sag, så mailoversigtens trådvisning kan afprøves
+    const ekstern = pick(TEST_KONTAKTER);
+    const traade = Array.from({ length: 1 + Math.floor(Math.random() * 3) }, (x, j) => ({ id: 'TEST-TRAAD:' + res.nr + ':' + j,
+      emne: res.tag + ' ' + (j === 0 ? titel : pick(['Kommentarer til udkast', 'Opfølgning', 'Spørgsmål til vilkår', 'Mødeindkaldelse'])) }));
     const tilfoej = (type, titel, min, n) => {
       for (let k = 0; k < n; k++) {
-        aktRows.push([tid(), res.nr, o.navn, type, titel, 'test', res.mappeUrl, min, 'TEST:' + res.nr + ':' + type + ':' + k, 'Testdata']);
+        const t = tid(), mid = 'TEST:' + res.nr + ':' + type + ':' + k;
+        aktRows.push([t, res.nr, o.navn, type, titel, 'test', res.mappeUrl, min, mid, 'Testdata']);
+        if (type.indexOf('Mail') !== 0) continue;
+        const tr = pick(traade), ud = type === 'Mail ud';
+        mailRows.push([res.nr, t, ud ? 'Ud' : 'Ind', ud ? mig : ekstern, ud ? ekstern : mig, '',
+          (k ? 'Re: ' : '') + tr.emne, pick(TEST_VEDH), tr.id, mid, '', '', 'Testdata', mig]);
       }
     };
     tilfoej('Mail ind', res.tag + ' Henvendelse', Number(ind[IND.MIN_MAIL_IND]) || 5, Math.floor(Math.random() * 25));
@@ -86,6 +100,10 @@ function opretTestsager() {
   if (aktRows.length) {
     const akt = sh_(SH.AKT);
     akt.getRange(akt.getLastRow() + 1, 1, aktRows.length, AKT_COLS.length).setValues(aktRows);
+  }
+  if (mailRows.length) {
+    const ml = sh_(SH.MAILS);
+    ml.getRange(ml.getLastRow() + 1, 1, mailRows.length, MAIL_COLS.length).setValues(mailRows);
   }
   opdaterNoegletal_({});
   try { SpreadsheetApp.getUi().alert(antal + ' testsager er oprettet.' + (antal < 20 ? ' Kør funktionen igen for at oprette resten.' : '')); }
@@ -102,7 +120,8 @@ function sletTestsager() {
     try { const l = GmailApp.getUserLabelByName(CFG.LABEL_ROOT + '/' + s['Sagsnr']); if (l) l.deleteLabel(); } catch (e) { /* ignore */ }
   });
   test.map(s => s._row).sort((a, b) => b - a).forEach(r => t.sh.deleteRow(r));
-  // Aktivitet: skriv de rækker, der ikke er test, tilbage i én omgang (hurtigere end at slette enkeltvis)
+  // Mails og Aktivitet: skriv de rækker, der ikke er test, tilbage i én omgang (hurtigere end at slette enkeltvis)
+  fjernRaekker_(sh_(SH.MAILS), MAIL_COLS.length, 0, nr);
   const akt = sh_(SH.AKT);
   if (akt.getLastRow() > 1) {
     const alle = akt.getRange(2, 1, akt.getLastRow() - 1, AKT_COLS.length).getValues();
@@ -131,4 +150,13 @@ function nulstilOmraader() {
   sh.getRange(2, 1, raekker.length, OMR_COLS.length).setValues(raekker);
   try { SpreadsheetApp.getUi().alert('Områderne er sat til standardlisten (' + raekker.length + ' områder).'); }
   catch (e) { console.log('Områder nulstillet.'); }
+}
+
+/** Fjerner rækker, hvor kolonnen kolIdx (0-baseret) indeholder et af numrene i nr. */
+function fjernRaekker_(sh, bredde, kolIdx, nr) {
+  if (sh.getLastRow() < 2) return;
+  const alle = sh.getRange(2, 1, sh.getLastRow() - 1, bredde).getValues();
+  const behold = alle.filter(r => !nr.has(r[kolIdx]));
+  sh.getRange(2, 1, alle.length, bredde).clearContent();
+  if (behold.length) sh.getRange(2, 1, behold.length, bredde).setValues(behold);
 }

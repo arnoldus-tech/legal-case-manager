@@ -11,6 +11,7 @@ A lightweight matter intake and case management system for a small in-house lega
 | **Intake** | Web form creates a matter with a unique number (`KON-2026-0007` = area code, year, running number), a Drive folder structure, a matter note (from an optional template) and a Gmail label |
 | **Matter areas** | 15 default areas for the legal function of a listed company (capital markets, corporate, governance, M&A, commercial contracts, IT, IP, employment, data protection, export control, compliance, competition, ESG, disputes, general). Areas can have sub-areas – commercial contracts are split into *sales*, *procurement* and *collaboration*, and IP into patents, trademarks, licences and *NDAs* – each area has its own Drive folder |
 | **Email filing** | Emails are filed automatically when the matter number is in the subject, when sent to a plus address (`sager+KON-2026-0007@…`), when the thread is already filed, or when they reply to a filed email (`In-Reply-To` / `References`). Archived as PDF + original `.eml` + attachments, labelled in Gmail and logged. De-duplicated across team mailboxes via `Message-ID` |
+| **Email list** | Per matter or across all matters: date, direction, from, to, subject, attachments; sortable columns, filters, grouping by conversation, and full-text search in archived emails and attachments (via Drive search) |
 | **"Unfiled" queue** | Emails with weak signals (a matter's external contact, the same company domain, or a subject resembling the matter title) are suggested in a personal queue – visible only to the mailbox owner – where they can be filed, turned into a new matter, or dismissed |
 | **Documents** | Files in the matter folder are registered; Google Docs edits are counted per day |
 | **Time estimate** | Effort is *estimated* from logged emails and documents using configurable rates, plus optional manual time entries |
@@ -56,7 +57,7 @@ Email filing is being redesigned to work like matter-centric email management in
 1. ~~**Thread recognition**~~ ✅ and ~~**"Unfiled" queue**~~ ✅
 2. **Gmail add-on** – "File to matter" and "Create matter from this email" in the Gmail side panel
 3. **Contact register** – a dedicated contacts tab per matter, so contact matches can be filed automatically instead of suggested, and AI-assisted suggestions for the queue
-4. **Searchable email list per matter** and **"Get this email in my Gmail"** (re-import the archived `.eml` so a colleague can reply in the original thread – e.g. during holidays), with per-matter deputies
+4. ~~**Searchable email list per matter**~~ ✅ and **"Get this email in my Gmail"** (re-import the archived `.eml` so a colleague can reply in the original thread – e.g. during holidays), with per-matter deputies
 5. **Confidential matters** – separate register and folder, access approved by the responsible lawyer and the head of legal
 6. **AI triage** – suggested area, priority, deadline and summary for new matters (data governance to be defined first)
 

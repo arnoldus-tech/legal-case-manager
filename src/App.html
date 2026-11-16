@@ -28,6 +28,12 @@
   table { width:100%; border-collapse:collapse; font-size:13px; }
   th, td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--linje); vertical-align:middle; }
   th { color:var(--dæmpet); font-weight:600; font-size:12px; background:#fafbfd; position:sticky; top:0; }
+  th.sort { cursor:pointer; user-select:none; } th.sort:hover { color:var(--primær); }
+  tr.traad { background:#f4f7fb; cursor:pointer; } tr.traad td { font-weight:600; }
+  tr.i-traad td:first-child { padding-left:22px; }
+  .retning { display:inline-block; width:34px; text-align:center; border-radius:8px; font-size:11px; padding:1px 0; }
+  .retning.Ind { background:#e5f3ea; } .retning.Ud { background:#eef0fb; }
+  .muted { color:var(--dæmpet); font-size:12px; }
   td.tal, th.tal { text-align:right; font-variant-numeric:tabular-nums; }
   .tabelboks { overflow:auto; max-height:70vh; border:1px solid var(--linje); border-radius:10px; background:var(--kort); }
   .pille { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; background:#eef3f8; }
@@ -64,6 +70,7 @@
   <nav>
     <button data-vis="dashboard">Dashboard</button>
     <button data-vis="sager">Sager</button>
+    <button data-vis="mails">Mails</button>
     <button data-vis="udensag">Uden sag <span id="koeAntal" class="badge"></span></button>
     <button data-vis="ny">Ny sag</button>
   </nav>
@@ -108,6 +115,26 @@
       <tbody id="t-sager"></tbody>
     </table></div>
     <p id="antal" style="color:var(--dæmpet);font-size:12px"></p>
+  </section>
+
+  <!-- MAILS -->
+  <section class="vis" id="vis-mails">
+    <div class="filtre" style="align-items:center">
+      <select id="m-sag" onchange="hentMails()"><option value="">Alle sager</option></select>
+      <input id="m-filter" placeholder="Filtrér på afsender, modtager, emne, vedhæftning…" style="flex:1;min-width:220px" oninput="tegnMails()">
+      <select id="m-retning" onchange="tegnMails()"><option value="">Ind og ud</option><option>Ind</option><option>Ud</option></select>
+      <label class="muted" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="m-traade" onchange="tegnMails()"> Saml i tråde</label>
+    </div>
+    <div class="filtre" style="align-items:center">
+      <input id="m-indhold" placeholder="Søg i mailtekst og vedhæftninger…" style="flex:1;min-width:220px" onkeydown="if(event.key==='Enter')soegIndhold()">
+      <button class="knap lys lille" onclick="soegIndhold()">Søg i indhold</button>
+      <button class="knap lys lille" id="m-nulstil" style="display:none" onclick="nulstilIndhold()">Ryd søgning</button>
+    </div>
+    <div class="tabelboks"><table>
+      <thead><tr id="m-hoved"></tr></thead>
+      <tbody id="t-mails"><tr><td class="indlaes">Henter…</td></tr></tbody>
+    </table></div>
+    <p id="m-antal" class="muted"></p>
   </section>
 
   <!-- UDEN SAG -->
@@ -159,6 +186,7 @@
     document.querySelectorAll('.vis').forEach(s => s.classList.toggle('aktiv', s.id === 'vis-' + v));
     if (v === 'dashboard' && D && chartsKlar) tegnDashboard();
     if (v === 'udensag') hentKoe();
+    if (v === 'mails' && !M) hentMails();
   }
   skift(START_VIS);
 
@@ -179,6 +207,10 @@
 
   function udfyldValg() {
     const opt = (arr) => arr.map(x => `<option>${esc(x)}</option>`).join('');
+    const mSag = byId('m-sag'), glSag = mSag.value;
+    mSag.innerHTML = '<option value="">Alle sager</option>' + D.sager.slice().sort((a, b) => a.nr < b.nr ? 1 : -1)
+      .map(s => `<option value="${esc(s.nr)}">${esc(s.nr)} ${esc(s.titel)}</option>`).join('');
+    mSag.value = glSag;
     const nyOmr = document.getElementById('ny-omr'), glOmr = nyOmr.value;
     nyOmr.innerHTML = opt(D.omrNavne); if (glOmr) nyOmr.value = glOmr;
     visUnder();
@@ -274,6 +306,7 @@
         <button class="knap lys lille" onclick="kopier('[${esc(s.nr)}]')" title="Kopiér mail-tag">Tag</button>
         <a class="knap lys lille" style="text-decoration:none;display:inline-block" target="_blank"
            href="https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent('[' + s.nr + '] ' + s.titel)}">Ny mail</a>
+        <button class="knap lys lille" onclick="visMails('${esc(s.nr)}')">Mails</button>
         <button class="knap lys lille" onclick="del('${esc(s.nr)}')">Del</button>
       </td></tr>`).join('') || '<tr><td colspan="10" class="indlaes">Ingen sager matcher.</td></tr>';
     byId('antal').textContent = rows.length + ' af ' + D.sager.length + ' sager';
@@ -312,6 +345,60 @@
       if (ventendeMail) { const id = ventendeMail; ventendeMail = null; knyt(id, r.nr); }
       hent();
     }).withFailureHandler(e => { knap.disabled = false; knap.textContent = 'Opret sag'; fejl(e); }).opretSag(data);
+  }
+
+  // ---------- Mails ----------
+  let M = null, indholdsfund = null, mSort = { felt: 'dato', op: false };
+  const M_KOL = [['dato', 'Dato'], ['retning', ''], ['fra', 'Fra'], ['til', 'Til'], ['emne', 'Emne'], ['vedh', 'Vedhæftninger']];
+
+  function visMails(nr) { byId('m-sag').value = nr; M = null; skift('mails'); }
+  function hentMails() {
+    byId('t-mails').innerHTML = '<tr><td class="indlaes">Henter mails…</td></tr>';
+    nulstilIndhold(true);
+    google.script.run.withSuccessHandler(m => { M = m; tegnMails(); }).withFailureHandler(fejl).hentMails(byId('m-sag').value);
+  }
+  function sorter(felt) { mSort = { felt: felt, op: mSort.felt === felt ? !mSort.op : felt !== 'dato' }; tegnMails(); }
+  function soegIndhold() {
+    const q = byId('m-indhold').value.trim(); if (q.length < 2) return;
+    byId('t-mails').innerHTML = '<tr><td class="indlaes">Søger i indhold…</td></tr>';
+    google.script.run.withSuccessHandler(mids => { indholdsfund = new Set(mids); byId('m-nulstil').style.display = ''; tegnMails(); })
+      .withFailureHandler(fejl).soegMailindhold(byId('m-sag').value, q);
+  }
+  function nulstilIndhold(stille) {
+    indholdsfund = null; byId('m-indhold').value = ''; byId('m-nulstil').style.display = 'none';
+    if (!stille && M) tegnMails();
+  }
+
+  function tegnMails() {
+    if (!M) return;
+    const alle = !byId('m-sag').value, q = byId('m-filter').value.toLowerCase(), r = byId('m-retning').value;
+    const kol = alle ? [['nr', 'Sag']].concat(M_KOL) : M_KOL;
+    byId('m-hoved').innerHTML = kol.map(k => `<th class="sort" onclick="sorter('${k[0]}')">${k[1]}${mSort.felt === k[0] ? (mSort.op ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th></th>';
+    const rows = M.filter(m => (!r || m.retning === r) && (!indholdsfund || indholdsfund.has(m.mid)) &&
+      (!q || [m.fra, m.til, m.cc, m.emne, m.vedh, m.nr].join(' ').toLowerCase().includes(q)));
+    const f = mSort.felt, dir = mSort.op ? 1 : -1;
+    rows.sort((a, b) => String(a[f] || '').localeCompare(String(b[f] || ''), 'da') * dir);
+    const knap = (url, tekst, titel) => url ? `<a class="knap lys lille" style="text-decoration:none" href="${esc(url)}" target="_blank" title="${titel || ''}">${tekst}</a> ` : '';
+    const linje = (m, kl, skjult) => `<tr class="${kl || ''}"${skjult ? ' style="display:none"' : ''}>${alle ? `<td>${esc(m.nr)}</td>` : ''}
+      <td style="white-space:nowrap">${esc(m.dato.slice(0, 10))} <span class="muted">${esc(m.dato.slice(11, 16))}</span></td>
+      <td><span class="retning ${esc(m.retning)}">${esc(m.retning)}</span></td>
+      <td>${esc(m.fra)}</td><td class="muted">${esc(m.til)}${m.cc ? '<br>Cc: ' + esc(m.cc) : ''}</td>
+      <td>${esc(m.emne || '(intet emne)')}</td><td class="muted">${esc(m.vedh)}</td>
+      <td style="white-space:nowrap">${knap(m.pdf, 'PDF')}${knap(m.eml, '.eml')}${knap(m.gmail, 'Gmail', 'Virker kun, hvis mailen ligger i din egen Gmail')}</td></tr>`;
+    let html = '';
+    if (byId('m-traade').checked) {
+      const grupper = {}, orden = [];
+      rows.forEach(m => { const k = m.traad || m.mid; if (!grupper[k]) { grupper[k] = []; orden.push(k); } grupper[k].push(m); });
+      orden.forEach((k, i) => {
+        const g = grupper[k], sidst = g.reduce((a, b) => a.dato > b.dato ? a : b);
+        const emne = (sidst.emne || '').replace(/^((re|sv|fw|fwd|vs)\s*:\s*)+/i, '') || '(intet emne)';
+        html += `<tr class="traad" onclick="document.querySelectorAll('.tg${i}').forEach(x => x.style.display = x.style.display === 'none' ? '' : 'none')">
+          <td colspan="${kol.length + 1}">▸ ${esc(emne)} <span class="muted">· ${g.length} mail${g.length > 1 ? 's' : ''} · seneste ${esc(sidst.dato.slice(0, 10))}</span></td></tr>`;
+        html += g.map(m => linje(m, 'i-traad tg' + i, true)).join('');
+      });
+    } else html = rows.map(m => linje(m)).join('');
+    byId('t-mails').innerHTML = html || `<tr><td colspan="${kol.length + 1}" class="indlaes">Ingen mails${indholdsfund ? ', der matcher søgningen' : ''}.</td></tr>`;
+    byId('m-antal').textContent = rows.length + ' af ' + M.length + ' mails' + (indholdsfund ? ' (indholdssøgning aktiv)' : '');
   }
 
   // ---------- Uden sag ----------
