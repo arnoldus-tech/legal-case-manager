@@ -85,7 +85,8 @@ const FRI_DOMAENER = ['gmail.com', 'googlemail.com', 'hotmail.com', 'hotmail.dk'
 // ============================================================
 
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu('⚖️ Sagsstyring')
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('⚖️ Sagsstyring')
     .addItem('Opret ny sag…', 'visNySag')
     .addItem('Åbn dashboard', 'visDashboard')
     .addSeparator()
@@ -99,6 +100,9 @@ function onOpen() {
     .addSeparator()
     .addItem('Aktivér automatisk mail-synk for mig', 'aktiverSynk')
     .addItem('Opsætning (kør første gang)', 'opsaetning')
+    .addSubMenu(ui.createMenu('Demo')
+      .addItem('Opret 20 testsager', 'opretTestsager')
+      .addItem('Slet testsager', 'sletTestsager'))
     .addToUi();
 }
 
