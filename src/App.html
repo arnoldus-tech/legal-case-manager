@@ -134,14 +134,14 @@
     <div class="kpis" id="kpis"><div class="loading">Loading…</div></div>
     <div class="grid">
       <div class="card">
-        <h2>Matters by area</h2><p class="sub">Click an area to see its matters</p>
+        <h2>Open matters by area</h2><p class="sub">Click an area to see its matters</p>
         <div class="donutwrap"><svg class="donut" id="donut" viewBox="0 0 240 240"></svg><div class="legend" id="legend"></div></div>
       </div>
       <div class="card" id="drill"></div>
     </div>
     <div class="grid">
       <div class="card"><h2>Emails and documents by area</h2><p class="sub">Filed on matters – counted, not estimated. Click a bar to open the area</p><div id="c-activity" class="chart"></div></div>
-      <div class="card"><h2>Sub-areas</h2><p class="sub">Areas that are split further</p><div id="subareas"></div></div>
+      <div class="card"><h2>Sub-areas</h2><p class="sub">Open matters in areas that are split further</p><div id="subareas"></div></div>
     </div>
     <div class="grid">
       <div class="card" id="months-card"><h2>Opened and closed matters</h2><p class="sub">Last 12 months</p><div id="c-months" class="chart"></div></div>
@@ -254,8 +254,8 @@
     google.script.run.withSuccessHandler(d => {
       D = d;
       if (selArea === null) {   // first load: Commercial contracts, or the area with most matters
-        const def = d.areas.find(a => a.name === DEFAULT_AREA && a.total) || d.areas.slice().sort((a, b) => b.total - a.total)[0];
-        selArea = def && def.total ? def.name : ALL;
+        const def = d.areas.find(a => a.name === DEFAULT_AREA && a.open) || d.areas.slice().sort((a, b) => b.open - a.open)[0];
+        selArea = def && def.open ? def.name : ALL;
       }
       byId('updated').textContent = 'Updated ' + d.updated;
       fillSelects(); drawKpis(); drawDonut(); drawDrill(); drawSubareas(); drawActive(); drawMatters();
@@ -278,20 +278,21 @@
 
   /** Donut drawn as SVG circles with dash arrays – no chart library, so clicks don't flicker. */
   function drawDonut() {
-    const areas = D.areas.filter(a => a.total > 0);
-    const total = areas.reduce((t, a) => t + a.total, 0);
+    // Only open matters – the same figure as the "Open matters" tile
+    const areas = D.areas.filter(a => a.open > 0);
+    const total = areas.reduce((t, a) => t + a.open, 0);
     const R = 88, C = 2 * Math.PI * R, gap = areas.length > 1 ? 2 : 0;
     let offset = 0;
     const slices = areas.map(a => {
-      const len = total ? a.total / total * C : 0;
+      const len = total ? a.open / total * C : 0;
       const el = `<circle class="slice ${selArea === a.name ? 'sel' : ''}" cx="120" cy="120" r="${R}" stroke="${areaColor(a.name)}"
         stroke-dasharray="${Math.max(len - gap, 0.5)} ${C}" stroke-dashoffset="${-offset}" transform="rotate(-90 120 120)"
-        onclick="selectArea('${esc(a.name)}')"><title>${esc(a.name)}: ${a.total}</title></circle>`;
+        onclick="selectArea('${esc(a.name)}')"><title>${esc(a.name)}: ${a.open} open</title></circle>`;
       offset += len;
       return el;
     }).join('');
     const sel = D.areas.find(a => a.name === selArea);
-    const centre = sel ? [sel.total, sel.code || sel.name] : [total, 'all matters'];
+    const centre = sel ? [sel.open, 'open · ' + (sel.code || sel.name)] : [total, 'open matters'];
     byId('donut').classList.toggle('has-sel', !!sel);
     // The centre is a button back to the overview of all open matters
     byId('donut').innerHTML = (total ? slices : `<circle cx="120" cy="120" r="${R}" fill="none" stroke="#eef1f6" stroke-width="30"/>`) +
@@ -301,8 +302,8 @@
     byId('legend').innerHTML = (total ? `<button class="${selArea === ALL ? 'sel' : ''}" onclick="selectArea(ALL)">
       <i style="background:conic-gradient(#16324f 0 25%, #2a6f97 0 50%, #e9a03b 0 75%, #61a5c2 0)"></i><b>All areas</b><em>${total}</em></button>` : '') +
       areas.map(a => `<button class="${selArea === a.name ? 'sel' : ''}" onclick="selectArea('${esc(a.name)}')">
-      <i style="background:${areaColor(a.name)}"></i>${esc(a.name)}<em>${a.total}</em></button>`).join('') ||
-      '<span class="muted">No matters yet.</span>';
+      <i style="background:${areaColor(a.name)}"></i>${esc(a.name)}<em>${a.open}</em></button>`).join('') ||
+      '<span class="muted">No open matters.</span>';
   }
 
   /** Selects an area (and optionally a sub-area). Clicking the selected area again returns to all open matters. */
@@ -315,8 +316,8 @@
   function drawDrill() {
     const a = D.areas.find(x => x.name === selArea);
     if (!a) { drawAllOpen(); return; }
-    const list = D.matters.filter(m => m.area === a.name && (!selSub || (m.sub || '(not set)') === selSub))
-      .sort((x, y) => (x.status === 'Closed') - (y.status === 'Closed') || activity(y) - activity(x));
+    const list = D.matters.filter(m => m.area === a.name && m.status !== 'Closed' && (!selSub || (m.sub || '(not set)') === selSub))
+      .sort((x, y) => activity(y) - activity(x));
     byId('drill').innerHTML = `<button class="btn light small" style="margin-bottom:10px" onclick="selectArea(ALL)">← All open matters</button>
       <h2 style="display:flex;align-items:center;gap:8px"><i style="width:12px;height:12px;border-radius:3px;background:${areaColor(a.name)}"></i>
         ${esc(a.name)}${selSub ? ' <span class="muted" style="font-size:13px">› ' + esc(selSub) + '</span>' : ''}</h2>
@@ -329,9 +330,9 @@
       ${list.slice(0, 8).map(m => `<tr class="click" onclick="window.open('${esc(m.folder)}','_blank')"><td>${esc(m.no)}</td>
         <td>${esc(m.title)}${m.sub ? `<div class="muted">${esc(m.sub)}</div>` : ''}</td><td>${statusPill(m.status)}</td>
         <td class="num">${m.emails}</td><td class="num">${m.docs}</td></tr>`).join('') ||
-        '<tr><td colspan="5" class="muted">No matters.</td></tr>'}</table>
+        '<tr><td colspan="5" class="muted">No open matters.</td></tr>'}</table>
       <div style="margin-top:12px;display:flex;gap:8px"><button class="btn light small" onclick="openMatters('${esc(a.name)}','${esc(selSub || '')}')">
-        Show all ${list.length} in Matters</button>${selSub ? `<button class="btn light small" onclick="selectArea('${esc(a.name)}')">All of ${esc(a.name)}</button>` : ''}</div>`;
+        Show all ${list.length} open in Matters</button>${selSub ? `<button class="btn light small" onclick="selectArea('${esc(a.name)}')">All of ${esc(a.name)}</button>` : ''}</div>`;
   }
 
   /** Overview of all open matters across areas, nearest deadline first. */
@@ -352,18 +353,18 @@
 
   /** Segmented bar of an area's sub-areas; each segment filters the drill-down. */
   function subBar(a) {
-    const keys = a.subList.concat(Object.keys(a.subs).filter(s => a.subList.indexOf(s) < 0)).filter(s => a.subs[s]);
-    const total = keys.reduce((t, s) => t + a.subs[s].total, 0) || 1;
+    const keys = a.subList.concat(Object.keys(a.subs).filter(s => a.subList.indexOf(s) < 0)).filter(s => a.subs[s] && a.subs[s].open);
+    const total = keys.reduce((t, s) => t + a.subs[s].open, 0) || 1;
     const col = i => PALETTE[(i * 3 + 1) % PALETTE.length];
-    return `<div class="seg">${keys.map((s, i) => `<div title="${esc(s)}: ${a.subs[s].total}" style="width:${a.subs[s].total / total * 100}%;background:${col(i)}"
+    return `<div class="seg">${keys.map((s, i) => `<div title="${esc(s)}: ${a.subs[s].open} open" style="width:${a.subs[s].open / total * 100}%;background:${col(i)}"
         onclick="selectArea('${esc(a.name)}','${esc(s)}')"></div>`).join('')}</div>
       <div class="seglegend">${keys.map((s, i) => `<button class="${selArea === a.name && selSub === s ? 'sel' : ''}"
-        onclick="selectArea('${esc(a.name)}','${esc(s)}')"><i style="background:${col(i)}"></i>${esc(s)} <b>${a.subs[s].total}</b></button>`).join('')}</div>`;
+        onclick="selectArea('${esc(a.name)}','${esc(s)}')"><i style="background:${col(i)}"></i>${esc(s)} <b>${a.subs[s].open}</b></button>`).join('')}</div>`;
   }
 
   function drawSubareas() {
     const withSubs = D.areas.filter(a => a.subList.length);
-    byId('subareas').innerHTML = withSubs.map(a => `<div class="subarea"><h3>${esc(a.name)}<span>${a.total} matters</span></h3>${a.total ? subBar(a) : '<div class="muted">No matters yet.</div>'}</div>`).join('') ||
+    byId('subareas').innerHTML = withSubs.map(a => `<div class="subarea"><h3>${esc(a.name)}<span>${a.open} open</span></h3>${a.open ? subBar(a) : '<div class="muted">No open matters.</div>'}</div>`).join('') ||
       '<p class="muted">No areas have sub-areas. Add them in the Areas sheet (comma-separated).</p>';
   }
 
@@ -424,7 +425,7 @@
   }
 
   function openMatters(area, sub) {
-    byId('f-area').value = area; fillSubFilter(sub); byId('f-status').value = area ? '' : 'active'; show('matters'); drawMatters();
+    byId('f-area').value = area; fillSubFilter(sub); byId('f-status').value = 'active'; show('matters'); drawMatters();
   }
 
   function drawMatters() {
