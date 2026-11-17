@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 64" width="300" height="64" role="img" aria-label="arnoldus.tech">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#61a5c2"/>
+      <stop offset="1" stop-color="#2a6f97"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#g)"/>
+  <text x="30" y="46" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-weight="700" font-size="34" fill="#fff">a</text>
+  <circle cx="47" cy="41" r="4.2" fill="#e9a03b"/>
+  <text x="74" y="42" font-family="Inter, Segoe UI, Arial, sans-serif" font-weight="700" font-size="26" fill="#16324f">arnoldus<tspan fill="#2a6f97">.tech</tspan></text>
+</svg>

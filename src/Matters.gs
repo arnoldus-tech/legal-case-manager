@@ -46,7 +46,7 @@ function createMatter(d) {
       'External contacts': d.external || '', 'Client/department': d.client || '', 'Opened': now,
       'Deadline': d.deadline ? new Date(d.deadline) : '', 'Closed': '', 'Folder': folder.getUrl(),
       'Folder ID': folder.getId(), 'Description': d.description || '',
-      'Emails in': 0, 'Emails out': 0, 'Documents': 0, 'Size (MB)': 0, 'Last sync': ''
+      'Emails': 0, 'Documents': 0, 'Size (MB)': 0, 'Last sync': ''
     };
     sheet_(SHEETS.MATTERS).appendRow(MATTER_COLS.map(c => row[c]));
     sheet_(SHEETS.ACTIVITY).appendRow([now, no, area.name, ACT.OPENED, 'Matter opened: ' + d.title, owner, folder.getUrl(), '', '']);

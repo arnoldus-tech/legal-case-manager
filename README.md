@@ -1,3 +1,5 @@
+<img src="docs/logo.svg" alt="arnoldus.tech" width="220">
+
 # Legal Matter Manager for Google Workspace
 
 A lightweight matter intake and management system for an in-house legal team, built entirely on Google Workspace: **Sheets** as the register, **Drive** for matter folders, **Gmail** for correspondence, **Docs** for matter notes and **Slides** for reporting – glued together with Google Apps Script.
@@ -13,9 +15,9 @@ A lightweight matter intake and management system for an in-house legal team, bu
 | **Email filing without tags** | Emails are filed automatically when they reply to a filed email (`In-Reply-To` / `References`), belong to a filed conversation, are sent to a plus address (`legal+COM-2026-0007@…`) or mention the matter number. Filed as PDF + original `.eml` + attachments, labelled in Gmail and de-duplicated across team mailboxes via `Message-ID`. Google system notifications are never filed |
 | **"Unfiled" queue** | Emails with weak signals (a matter's external contact, the same company domain, or a subject resembling the matter title) are suggested in a personal queue – visible only to the mailbox owner – where they can be filed, turned into a new matter, or dismissed |
 | **Email list** | Per matter or across matters: date, direction, from, to, subject, attachments; sortable, filterable, grouped by conversation, with full-text search in filed emails and attachments |
-| **Dashboard** | Open / new / on-hold / recently closed matters, an interactive donut by area with drill-down to sub-areas and matters, emails and documents by area, opened vs. closed per month, workload per owner and the most active matters. **Only counted figures – no estimated hours** |
+| **Dashboard** | Open / new / on-hold / recently closed matters, an interactive donut by area with drill-down to sub-areas and matters, emails and documents by area, opened vs. closed per month, workload per owner (when there is more than one) and the most active matters. **Only counted figures – no estimated hours** |
 | **Collaboration** | Team members get access to the matter folder. A matter's external contacts are recorded only to recognise their emails – nothing is shared outside the team |
-| **Reporting** | One click builds a Google Slides deck with key figures, charts linked to the register and matter lists |
+| **Reporting** | One click builds a branded Google Slides deck with key figures, charts linked to the register and a *Focus* slide with placeholders for what the team wants to highlight |
 
 ## Architecture
 

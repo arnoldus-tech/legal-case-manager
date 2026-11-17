@@ -16,8 +16,12 @@
   body { margin:0; font-family:Inter, "Segoe UI", Roboto, Arial, sans-serif; background:var(--bg); color:var(--ink); font-size:14px; }
   a { color:var(--teal); }
   header { background:var(--navy); color:#fff; padding:12px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; position:sticky; top:0; z-index:5; }
-  header h1 { font-size:17px; margin:0; font-weight:700; letter-spacing:.2px; display:flex; align-items:center; gap:8px; }
-  header h1 span { opacity:.6; font-weight:500; font-size:12px; }
+  header h1 { font-size:17px; margin:0; font-weight:700; letter-spacing:.2px; display:flex; align-items:center; gap:10px; }
+  header h1 .logo { width:30px; height:30px; flex:none; }
+  header h1 .brand { font-weight:600; font-size:14px; color:#c7d4e3; } header h1 .brand em { font-style:normal; color:var(--sky); }
+  header h1 .divider { width:1px; height:20px; background:rgba(255,255,255,.25); }
+  footer { text-align:center; color:var(--muted); font-size:12px; padding:8px 0 28px; display:flex; justify-content:center; align-items:center; gap:8px; }
+  footer .logo { width:16px; height:16px; } footer em { font-style:normal; color:var(--teal); }
   nav { display:flex; gap:2px; }
   nav button { background:transparent; color:#c7d4e3; border:0; padding:8px 13px; border-radius:8px; cursor:pointer; font:inherit; font-weight:500; }
   nav button:hover { color:#fff; }
@@ -79,8 +83,6 @@
   .st-New { background:#fff3dc; color:#8a5a00; } .st-Open { background:#e3f2ea; color:#24654a; }
   .st-Onhold { background:#e9ecfb; color:#3b4a9b; } .st-Closed { background:#f0f0f0; color:#777; }
   .late { color:var(--red); font-weight:600; }
-  .dir { display:inline-block; width:36px; text-align:center; border-radius:8px; font-size:11px; padding:1px 0; font-weight:600; }
-  .dir.In { background:#e3f2ea; color:#24654a; } .dir.Out { background:#e9ecfb; color:#3b4a9b; }
   tr.thread { background:#f4f7fb; cursor:pointer; } tr.thread td { font-weight:600; }
   tr.in-thread td:first-child { padding-left:24px; }
 
@@ -109,7 +111,7 @@
 </head>
 <body>
 <header>
-  <h1>⚖️ Legal Matters <span>in-house legal</span></h1>
+  <h1><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#61a5c2"/><stop offset="1" stop-color="#2a6f97"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#lg)"/><text x="15" y="22.5" text-anchor="middle" font-family="Inter,Arial" font-weight="700" font-size="19" fill="#fff">a</text><circle cx="24.5" cy="21.2" r="2.3" fill="#e9a03b"/></svg><span class="brand">arnoldus<em>.tech</em></span><span class="divider"></span>Legal Matters</h1>
   <nav>
     <button data-view="dashboard">Dashboard</button>
     <button data-view="matters">Matters</button>
@@ -138,14 +140,15 @@
       <div class="card" id="drill"></div>
     </div>
     <div class="grid">
-      <div class="card"><h2>Emails and documents by area</h2><p class="sub">Filed on matters – counted, not estimated</p><div id="c-activity" class="chart"></div></div>
+      <div class="card"><h2>Emails and documents by area</h2><p class="sub">Filed on matters – counted, not estimated. Click a bar to open the area</p><div id="c-activity" class="chart"></div></div>
       <div class="card"><h2>Sub-areas</h2><p class="sub">Areas that are split further</p><div id="subareas"></div></div>
     </div>
     <div class="grid">
-      <div class="card"><h2>Opened and closed matters</h2><p class="sub">Last 12 months</p><div id="c-months" class="chart"></div></div>
-      <div class="card"><h2>Open matters by owner</h2><p class="sub">Workload</p><div id="c-owners" class="chart"></div></div>
+      <div class="card" id="months-card"><h2>Opened and closed matters</h2><p class="sub">Last 12 months</p><div id="c-months" class="chart"></div></div>
+      <div class="card" id="owners-card"><h2>Open matters by owner</h2><p class="sub">Workload</p><div id="c-owners" class="chart"></div></div>
     </div>
     <div class="card"><h2>Most active matters</h2><p class="sub">By number of emails and documents</p><div id="t-active"></div></div>
+    <footer><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#61a5c2"/><stop offset="1" stop-color="#2a6f97"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#lg)"/><text x="15" y="22.5" text-anchor="middle" font-family="Inter,Arial" font-weight="700" font-size="19" fill="#fff">a</text><circle cx="24.5" cy="21.2" r="2.3" fill="#e9a03b"/></svg> Legal Matters · built by arnoldus<em>.tech</em></footer>
   </section>
 
   <!-- MATTERS -->
@@ -170,7 +173,6 @@
     <div class="filters">
       <select id="e-matter" onchange="loadEmails()"><option value="">All matters</option></select>
       <input id="e-filter" placeholder="Filter by sender, recipient, subject, attachment…" style="flex:1;min-width:220px" oninput="drawEmails()">
-      <select id="e-dir" onchange="drawEmails()"><option value="">In and out</option><option>In</option><option>Out</option></select>
       <label class="muted" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="e-threads" onchange="drawEmails()"> Group by conversation</label>
     </div>
     <div class="filters">
@@ -235,7 +237,7 @@
   function fail(e) { notice('Error: ' + esc(e && e.message ? e.message : e), true); }
   const areaColor = name => PALETTE[Math.max(0, D.areas.findIndex(a => a.name === name)) % PALETTE.length];
   const statusPill = s => `<span class="pill st-${esc(String(s).replace(' ', ''))}">${esc(s)}</span>`;
-  const activity = m => m.emailsIn + m.emailsOut + m.docs;
+  const activity = m => m.emails + m.docs;
 
   document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.view));
   function show(v) {
@@ -264,7 +266,7 @@
       ['', k.new, 'New (intake)', 'awaiting triage'],
       ['', k.onHold, 'On hold', 'waiting for others'],
       ['', k.closed30, 'Closed', 'last 30 days'],
-      ['', k.emails, 'Emails filed', 'in and out'],
+      ['', k.emails, 'Emails', 'filed on matters'],
       ['', k.docs, 'Documents', fmtN(k.sizeMb) + ' MB stored']
     ].map(x => `<div class="kpi ${x[0]}"><b>${fmtN(x[1])}</b><span>${x[2]}</span><small>${x[3]}</small></div>`).join('');
   }
@@ -313,13 +315,13 @@
         ${esc(a.name)}${selSub ? ' <span class="muted" style="font-size:13px">› ' + esc(selSub) + '</span>' : ''}</h2>
       <div class="chips">
         <div class="chip"><b>${a.open}</b>open</div><div class="chip"><b>${a.closed}</b>closed</div>
-        <div class="chip"><b>${fmtN(a.emailsIn + a.emailsOut)}</b>emails</div><div class="chip"><b>${fmtN(a.docs)}</b>documents</div>
+        <div class="chip"><b>${fmtN(a.emails)}</b>emails</div><div class="chip"><b>${fmtN(a.docs)}</b>documents</div>
         <div class="chip"><b>${fmtN(a.sizeMb)}</b>MB</div></div>
       ${a.subList.length ? subBar(a) : ''}
       <table><tr><th>Matter</th><th>Title</th><th>Status</th><th class="num">Emails</th><th class="num">Docs</th></tr>
       ${list.slice(0, 8).map(m => `<tr class="click" onclick="window.open('${esc(m.folder)}','_blank')"><td>${esc(m.no)}</td>
         <td>${esc(m.title)}${m.sub ? `<div class="muted">${esc(m.sub)}</div>` : ''}</td><td>${statusPill(m.status)}</td>
-        <td class="num">${m.emailsIn + m.emailsOut}</td><td class="num">${m.docs}</td></tr>`).join('') ||
+        <td class="num">${m.emails}</td><td class="num">${m.docs}</td></tr>`).join('') ||
         '<tr><td colspan="5" class="muted">No matters.</td></tr>'}</table>
       <div style="margin-top:12px;display:flex;gap:8px"><button class="btn light small" onclick="openMatters('${esc(a.name)}','${esc(selSub || '')}')">
         Show all ${list.length} in Matters</button><button class="btn light small" onclick="selectArea('${esc(a.name)}')">Clear selection</button></div>`;
@@ -344,10 +346,10 @@
 
   function drawActive() {
     const top = D.matters.filter(m => activity(m) > 0).sort((a, b) => activity(b) - activity(a)).slice(0, 10);
-    byId('t-active').innerHTML = top.length ? `<table><tr><th>Matter</th><th>Area</th><th>Status</th><th class="num">Emails in</th><th class="num">Emails out</th><th class="num">Documents</th><th class="num">MB</th></tr>` +
+    byId('t-active').innerHTML = top.length ? `<table><tr><th>Matter</th><th>Area</th><th>Status</th><th class="num">Emails</th><th class="num">Documents</th><th class="num">MB</th></tr>` +
       top.map(m => `<tr class="click" onclick="window.open('${esc(m.folder)}','_blank')"><td><b>${esc(m.no)}</b> ${esc(m.title)}</td>
         <td>${esc(m.area)}${m.sub ? ' · ' + esc(m.sub) : ''}</td><td>${statusPill(m.status)}</td>
-        <td class="num">${m.emailsIn}</td><td class="num">${m.emailsOut}</td><td class="num">${m.docs}</td><td class="num">${fmtN(m.sizeMb)}</td></tr>`).join('') + '</table>'
+        <td class="num">${m.emails}</td><td class="num">${m.docs}</td><td class="num">${fmtN(m.sizeMb)}</td></tr>`).join('') + '</table>'
       : '<p class="loading">No activity yet.</p>';
   }
 
@@ -355,11 +357,11 @@
     const V = google.visualization;
     const base = { fontName: 'Inter', chartArea: { left: 170, top: 10, width: '68%', height: '78%' }, legend: { position: 'bottom' },
       hAxis: { minValue: 0, format: '0', gridlines: { color: '#eef1f6' } }, vAxis: { textStyle: { fontSize: 11 } }, bar: { groupWidth: '65%' } };
-    const areas = D.areas.filter(a => a.total > 0).sort((a, b) => (b.emailsIn + b.emailsOut + b.docs) - (a.emailsIn + a.emailsOut + a.docs));
+    const areas = D.areas.filter(a => a.total > 0).sort((a, b) => (b.emails + b.docs) - (a.emails + a.docs));
     if (areas.length) {
       const chart = new V.BarChart(byId('c-activity'));
-      chart.draw(V.arrayToDataTable([['Area', 'Emails in', 'Emails out', 'Documents']].concat(areas.map(a => [a.name, a.emailsIn, a.emailsOut, a.docs]))),
-        Object.assign({}, base, { isStacked: true, colors: ['#2a6f97', '#61a5c2', '#e9a03b'] }));
+      chart.draw(V.arrayToDataTable([['Area', 'Emails', 'Documents']].concat(areas.map(a => [a.name, a.emails, a.docs]))),
+        Object.assign({}, base, { colors: ['#2a6f97', '#e9a03b'], bar: { groupWidth: '75%' } }));
       V.events.addListener(chart, 'select', () => { const s = chart.getSelection()[0]; chart.setSelection([]); if (s && s.row != null) selectArea(areas[s.row].name); });
     } else byId('c-activity').innerHTML = '<p class="loading">No data yet.</p>';
 
@@ -367,9 +369,12 @@
       { fontName: 'Inter', colors: ['#2a6f97', '#c3ccd8'], legend: { position: 'bottom' }, chartArea: { left: 36, top: 10, width: '90%', height: '72%' },
         vAxis: { minValue: 0, format: '0', gridlines: { color: '#eef1f6' } }, bar: { groupWidth: '60%' } });
 
-    if (D.owners.length) new V.BarChart(byId('c-owners')).draw(V.arrayToDataTable([['Owner', 'Open matters']].concat(D.owners.map(o => [o.name, o.count]))),
+    // Workload per owner only makes sense with more than one owner
+    const several = D.owners.length > 1;
+    byId('owners-card').style.display = several ? '' : 'none';
+    byId('months-card').style.gridColumn = several ? '' : '1 / -1';
+    if (several) new V.BarChart(byId('c-owners')).draw(V.arrayToDataTable([['Owner', 'Open matters']].concat(D.owners.map(o => [o.name, o.count]))),
       Object.assign({}, base, { legend: { position: 'none' }, colors: ['#16324f'], chartArea: { left: 200, top: 10, width: '62%', height: '85%' } }));
-    else byId('c-owners').innerHTML = '<p class="loading">No open matters.</p>';
   }
 
   // ---------- matters ----------
@@ -411,7 +416,7 @@
       <td>${esc(m.area)}${m.sub ? `<div class="muted">${esc(m.sub)}</div>` : ''}</td>
       <td><select class="pill st-${esc(String(m.status).replace(' ', ''))}" onchange="setStatusUi('${esc(m.no)}', this)">${statusOptions(m.status)}</select></td>
       <td>${esc(m.owner)}</td><td class="${m.overdue ? 'late' : ''}">${esc(m.deadline)}</td>
-      <td class="num">${m.emailsIn + m.emailsOut}</td><td class="num">${m.docs}</td><td class="num">${fmtN(m.sizeMb)}</td>
+      <td class="num">${m.emails}</td><td class="num">${m.docs}</td><td class="num">${fmtN(m.sizeMb)}</td>
       <td style="white-space:nowrap">
         <button class="btn light small" onclick="viewEmails('${esc(m.no)}')">Emails</button>
         <a class="btn light small" target="_blank" href="https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent('[' + m.no + '] ' + m.title)}">New email</a>
@@ -434,7 +439,7 @@
   }
 
   // ---------- emails ----------
-  const E_COLS = [['date', 'Date'], ['direction', ''], ['from', 'From'], ['to', 'To'], ['subject', 'Subject'], ['attachments', 'Attachments']];
+  const E_COLS = [['date', 'Date'], ['from', 'From'], ['to', 'To'], ['subject', 'Subject'], ['attachments', 'Attachments']];
 
   function viewEmails(no) { byId('e-matter').value = no; E = null; show('emails'); }
   function loadEmails() {
@@ -453,17 +458,16 @@
 
   function drawEmails() {
     if (!E) return;
-    const all = !byId('e-matter').value, q = byId('e-filter').value.toLowerCase(), dir = byId('e-dir').value;
+    const all = !byId('e-matter').value, q = byId('e-filter').value.toLowerCase();
     const cols = all ? [['no', 'Matter']].concat(E_COLS) : E_COLS;
     byId('e-head').innerHTML = cols.map(c => `<th class="sort" onclick="sortEmails('${c[0]}')">${c[1]}${eSort.field === c[0] ? (eSort.asc ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th></th>';
-    const rows = E.filter(m => (!dir || m.direction === dir) && (!contentHits || contentHits.has(m.mid)) &&
+    const rows = E.filter(m => (!contentHits || contentHits.has(m.mid)) &&
       (!q || [m.from, m.to, m.cc, m.subject, m.attachments, m.no].join(' ').toLowerCase().includes(q)));
     const f = eSort.field, k = eSort.asc ? 1 : -1;
     rows.sort((a, b) => String(a[f] || '').localeCompare(String(b[f] || ''), 'en') * k);
     const link = (url, label, title) => url ? `<a class="btn light small" href="${esc(url)}" target="_blank" title="${title || ''}">${label}</a> ` : '';
     const line = (m, cls, hidden) => `<tr class="${cls || ''}"${hidden ? ' style="display:none"' : ''}>${all ? `<td>${esc(m.no)}</td>` : ''}
       <td style="white-space:nowrap">${esc(m.date.slice(0, 10))} <span class="muted">${esc(m.date.slice(11, 16))}</span></td>
-      <td><span class="dir ${esc(m.direction)}">${esc(m.direction)}</span></td>
       <td>${esc(m.from)}</td><td class="muted">${esc(m.to)}${m.cc ? '<br>Cc: ' + esc(m.cc) : ''}</td>
       <td>${esc(m.subject || '(no subject)')}</td><td class="muted">${esc(m.attachments)}</td>
       <td style="white-space:nowrap">${link(m.pdf, 'PDF')}${link(m.eml, 'Download .eml', 'Original email – opens in Outlook, Apple Mail or Thunderbird')}${link(m.gmail, 'Gmail', 'Works only if the email is in your own Gmail')}</td></tr>`;

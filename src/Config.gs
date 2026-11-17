@@ -23,7 +23,7 @@ const SHEETS = {
 
 const MATTER_COLS = ['Matter no', 'Title', 'Area', 'Sub-area', 'Status', 'Priority', 'Owner', 'Team', 'External contacts',
   'Client/department', 'Opened', 'Deadline', 'Closed', 'Folder', 'Folder ID', 'Description',
-  'Emails in', 'Emails out', 'Documents', 'Size (MB)', 'Last sync'];
+  'Emails', 'Documents', 'Size (MB)', 'Last sync'];
 const AREA_COLS = ['Area', 'Code', 'Folder ID', 'Folder', 'Sub-areas'];
 const ACTIVITY_COLS = ['Timestamp', 'Matter no', 'Area', 'Type', 'Title', 'Person', 'Link', 'Key', 'Source'];
 /** One row per filed email – the basis for the email list. */

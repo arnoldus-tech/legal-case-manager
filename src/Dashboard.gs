@@ -27,21 +27,21 @@ function getDashboardData() {
     no: m['Matter no'], title: m['Title'], area: m['Area'], sub: m['Sub-area'] || '', status: m['Status'],
     priority: m['Priority'], owner: m['Owner'], client: m['Client/department'],
     opened: fmt_(m['Opened']), deadline: fmt_(m['Deadline']), closed: fmt_(m['Closed']), folder: m['Folder'],
-    emailsIn: num(m['Emails in']), emailsOut: num(m['Emails out']), docs: num(m['Documents']), sizeMb: num(m['Size (MB)']),
+    emails: num(m['Emails']), docs: num(m['Documents']), sizeMb: num(m['Size (MB)']),
     overdue: !!(m['Deadline'] && m['Status'] !== 'Closed' && new Date(m['Deadline']) < today)
   }));
 
   const k = { total: matters.length, open: 0, new: 0, onHold: 0, closed: 0, opened30: 0, closed30: 0, emails: 0, docs: 0, sizeMb: 0 };
   const areas = {};
   const blankArea = (name, code, subs) => ({ name: name, code: code, subList: subs || [], total: 0, open: 0, closed: 0,
-    emailsIn: 0, emailsOut: 0, docs: 0, sizeMb: 0, subs: {} });
+    emails: 0, docs: 0, sizeMb: 0, subs: {} });
   areaList.forEach(a => areas[a.name] = blankArea(a.name, a.code, a.subs));
   const owners = {};
 
   matters.forEach(m => {
     const a = areas[m.area] = areas[m.area] || blankArea(m.area, '', []);
     a.total++;
-    a.emailsIn += m.emailsIn; a.emailsOut += m.emailsOut; a.docs += m.docs; a.sizeMb += m.sizeMb;
+    a.emails += m.emails; a.docs += m.docs; a.sizeMb += m.sizeMb;
     if (a.subList.length) {
       const s = a.subs[m.sub || '(not set)'] = a.subs[m.sub || '(not set)'] || { total: 0, open: 0 };
       s.total++; if (m.status !== 'Closed') s.open++;
@@ -54,7 +54,7 @@ function getDashboardData() {
     if (m.status === 'On hold') k.onHold++;
     if (m.opened && new Date(m.opened) >= d30) k.opened30++;
     if (m.closed && new Date(m.closed) >= d30) k.closed30++;
-    k.emails += m.emailsIn + m.emailsOut; k.docs += m.docs; k.sizeMb += m.sizeMb;
+    k.emails += m.emails; k.docs += m.docs; k.sizeMb += m.sizeMb;
   });
   Object.keys(areas).forEach(n => areas[n].sizeMb = Math.round(areas[n].sizeMb * 10) / 10);
   k.sizeMb = Math.round(k.sizeMb * 10) / 10;

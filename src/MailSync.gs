@@ -298,29 +298,28 @@ function syncDocuments_(ctx, matter) {
 }
 
 /**
- * Recounts emails in/out and documents per matter from the Activity log, and stores the folder
- * size for the matters synced in this run (synced = {matterNo: bytes}).
+ * Recounts emails and documents per matter from the Activity log, and stores the folder size
+ * for the matters synced in this run (synced = {matterNo: bytes}).
  */
 function updateCounts_(synced) {
   const sh = sheet_(SHEETS.MATTERS);
   if (sh.getLastRow() < 2) return;
   const counts = {};
   readTable_(SHEETS.ACTIVITY).rows.forEach(a => {
-    const c = counts[a['Matter no']] = counts[a['Matter no']] || { in: 0, out: 0, docs: 0 };
-    if (a['Type'] === ACT.EMAIL_IN) c.in++;
-    if (a['Type'] === ACT.EMAIL_OUT) c.out++;
+    const c = counts[a['Matter no']] = counts[a['Matter no']] || { emails: 0, docs: 0 };
+    if (a['Type'] === ACT.EMAIL_IN || a['Type'] === ACT.EMAIL_OUT) c.emails++;
     if (a['Type'] === ACT.DOC_ADDED) c.docs++;
   });
-  const first = col_('Emails in');
+  const first = col_('Emails');
   const nos = sh.getRange(2, col_('Matter no'), sh.getLastRow() - 1, 1).getValues().flat();
-  const old = sh.getRange(2, first, nos.length, 5).getValues();
+  const old = sh.getRange(2, first, nos.length, 4).getValues();
   const now = new Date();
   const out = nos.map((no, i) => {
-    const c = counts[no] || { in: 0, out: 0, docs: 0 };
+    const c = counts[no] || { emails: 0, docs: 0 };
     const isSynced = synced && synced[no] !== undefined;
-    return [c.in, c.out, c.docs, isSynced ? Math.round(synced[no] / 1048576 * 10) / 10 : old[i][3], isSynced ? now : old[i][4]];
+    return [c.emails, c.docs, isSynced ? Math.round(synced[no] / 1048576 * 10) / 10 : old[i][2], isSynced ? now : old[i][3]];
   });
-  sh.getRange(2, first, out.length, 5).setValues(out);
+  sh.getRange(2, first, out.length, 4).setValues(out);
 }
 
 // ---------- "Unfiled": suggestions stored per user in User Properties (visible only to the owner) ----------
