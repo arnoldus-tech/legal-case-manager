@@ -63,6 +63,20 @@ function readTable_(name) {
   return { sh: sh, headers: headers, rows: rows };
 }
 
+/**
+ * Rewrites the data rows of a sheet: keeps the rows that have a value in the first column (and pass
+ * the optional filter), closes any gaps and clears everything else – including columns beyond width
+ * left over from an earlier layout.
+ */
+function compactSheet_(sh, width, keepRow) {
+  const lastRow = sh.getLastRow(), lastCol = Math.max(sh.getLastColumn(), width);
+  if (lastRow < 2) return;
+  const all = sh.getRange(2, 1, lastRow - 1, width).getValues();
+  const keep = all.filter(r => r[0] !== '' && r[0] !== null && (!keepRow || keepRow(r)));
+  sh.getRange(2, 1, lastRow - 1, lastCol).clearContent();
+  if (keep.length) sh.getRange(2, 1, keep.length, width).setValues(keep);
+}
+
 function settings_() {
   const o = {};
   DEFAULT_SETTINGS.forEach(r => o[r[0]] = r[1]);

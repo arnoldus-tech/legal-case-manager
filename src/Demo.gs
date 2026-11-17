@@ -135,9 +135,5 @@ function resetAreas() {
 
 /** Rewrites a sheet without the rows whose column colIdx (0-based) is in the set – faster than deleting one by one. */
 function removeRows_(sh, width, colIdx, set) {
-  if (sh.getLastRow() < 2) return;
-  const all = sh.getRange(2, 1, sh.getLastRow() - 1, width).getValues();
-  const keep = all.filter(r => !set.has(r[colIdx]));
-  sh.getRange(2, 1, all.length, width).clearContent();
-  if (keep.length) sh.getRange(2, 1, keep.length, width).setValues(keep);
+  compactSheet_(sh, width, r => !set.has(r[colIdx]));
 }

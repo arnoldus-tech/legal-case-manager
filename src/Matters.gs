@@ -48,7 +48,9 @@ function createMatter(d) {
       'Folder ID': folder.getId(), 'Description': d.description || '',
       'Emails': 0, 'Documents': 0, 'Size (MB)': 0, 'Last sync': ''
     };
-    sheet_(SHEETS.MATTERS).appendRow(MATTER_COLS.map(c => row[c]));
+    const sh = sheet_(SHEETS.MATTERS);
+    sh.appendRow(MATTER_COLS.map(c => row[c]));
+    formatMatterRow_(sh, sh.getLastRow());
     sheet_(SHEETS.ACTIVITY).appendRow([now, no, area.name, ACT.OPENED, 'Matter opened: ' + d.title, owner, folder.getUrl(), '', '']);
 
     return { no: no, tag: tag, folderUrl: folder.getUrl(), noteUrl: noteUrl, failed: failed };
@@ -110,6 +112,12 @@ function selectedMatter_() {
 }
 
 // ---------- helpers ----------
+
+/** Date formats on one matter row (appended rows do not always inherit the column format). */
+function formatMatterRow_(sh, row) {
+  ['Opened', 'Deadline', 'Closed'].forEach(c => sh.getRange(row, col_(c)).setNumberFormat('yyyy-mm-dd'));
+  sh.getRange(row, col_('Last sync')).setNumberFormat('yyyy-mm-dd hh:mm');
+}
 
 function findMatter_(no) {
   const t = readTable_(SHEETS.MATTERS);

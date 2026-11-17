@@ -315,6 +315,7 @@ function updateCounts_(synced) {
   const old = sh.getRange(2, first, nos.length, 4).getValues();
   const now = new Date();
   const out = nos.map((no, i) => {
+    if (!no) return ['', '', '', ''];   // blank row – leave it blank
     const c = counts[no] || { emails: 0, docs: 0 };
     const isSynced = synced && synced[no] !== undefined;
     return [c.emails, c.docs, isSynced ? Math.round(synced[no] / 1048576 * 10) / 10 : old[i][2], isSynced ? now : old[i][3]];

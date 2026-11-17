@@ -54,6 +54,10 @@ function setup() {
   });
   st.autoResizeColumn(1);
 
+  // Close gaps and remove leftovers from earlier layouts before formatting
+  compactSheet_(ss.getSheetByName(SHEETS.MATTERS), MATTER_COLS.length);
+  compactSheet_(ss.getSheetByName(SHEETS.ACTIVITY), ACTIVITY_COLS.length);
+  compactSheet_(ss.getSheetByName(SHEETS.EMAILS), EMAIL_COLS.length);
   formatMattersSheet_(ss);
   try { GmailApp.getUserLabelByName(CFG.LABEL_ROOT) || GmailApp.createLabel(CFG.LABEL_ROOT); } catch (e) { /* Gmail not available */ }
   installSyncTrigger(true);
