@@ -6,6 +6,22 @@ A lightweight matter intake and management system for an in-house legal team, bu
 
 > Status: working prototype. All data in screenshots and demos is fictitious.
 
+![Dashboard](docs/screenshots/dashboard.png)
+
+## Why
+
+Small in-house legal teams rarely get a document management system – but they still need to know which matters are open, where the correspondence is, and what the team spends its work on. Most of that already lives in Google Workspace. This project turns it into a matter system without asking lawyers to change how they work: they keep writing emails in Gmail and documents in Drive, and the system files them on the right matter.
+
+It is designed by a lawyer, with the trade-offs a legal function cares about – least-privilege access to mailboxes, nothing read before there is a reason to, and figures that are counted rather than guessed. It was built with an AI coding assistant.
+
+## Screenshots
+
+| Matter list | Email list per matter |
+|---|---|
+| ![Matters](docs/screenshots/matters.png) | ![Emails](docs/screenshots/emails.png) |
+| **All open matters** | **Unfiled – suggestions only the mailbox owner sees** |
+| ![All open matters](docs/screenshots/dashboard-all.png) | ![Unfiled](docs/screenshots/unfiled.png) |
+
 ## What it does
 
 | | |
@@ -100,4 +116,4 @@ All matter data stays in the user's own Google account/Workspace. The repository
 
 ## Licence
 
-Not yet decided.
+[MIT](LICENSE)
