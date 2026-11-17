@@ -18,6 +18,12 @@ function showApp_(view, title, width, height) {
 /** All dashboard data. Dates are returned as text (google.script.run cannot send Date objects). */
 function getDashboardData() {
   const rows = readTable_(SHEETS.MATTERS).rows;
+  const counts = {};
+  readTable_(SHEETS.ACTIVITY).rows.forEach(a => {
+    const c = counts[a['Matter no']] = counts[a['Matter no']] || { emails: 0, docs: 0 };
+    if (a['Type'] === ACT.EMAIL_IN || a['Type'] === ACT.EMAIL_OUT) c.emails++;
+    if (a['Type'] === ACT.DOC_ADDED) c.docs++;
+  });
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const d30 = new Date(today.getTime() - 30 * 864e5);
   const areaList = areas_();
@@ -27,7 +33,7 @@ function getDashboardData() {
     no: m['Matter no'], title: m['Title'], area: m['Area'], sub: m['Sub-area'] || '', status: m['Status'],
     priority: m['Priority'], owner: m['Owner'], client: m['Client/department'],
     opened: fmt_(m['Opened']), deadline: fmt_(m['Deadline']), closed: fmt_(m['Closed']), folder: m['Folder'],
-    emails: num(m['Emails']), docs: num(m['Documents']), sizeMb: num(m['Size (MB)']),
+    emails: (counts[m['Matter no']] || {}).emails || 0, docs: (counts[m['Matter no']] || {}).docs || 0, sizeMb: num(m['Size (MB)']),
     overdue: !!(m['Deadline'] && m['Status'] !== 'Closed' && new Date(m['Deadline']) < today)
   }));
 

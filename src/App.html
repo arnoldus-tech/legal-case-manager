@@ -223,6 +223,7 @@
 <script>
   const START_VIEW = '<?= view ?>';
   const PALETTE = ['#16324f','#2a6f97','#61a5c2','#e9a03b','#c8553d','#7b6d8d','#3f8f6b','#9bc1bc','#e07a5f','#5c677d','#b5838d','#6d9dc5','#a3b18a','#d4a373','#457b9d'];
+  const ALL = '*all*', DEFAULT_AREA = 'Commercial contracts';
   let D = null, chartsReady = false, selArea = null, selSub = null;
   let E = null, contentHits = null, eSort = { field: 'date', asc: false };
   let U = null, pendingEmail = null;
@@ -252,6 +253,10 @@
   function load() {
     google.script.run.withSuccessHandler(d => {
       D = d;
+      if (selArea === null) {   // first load: Commercial contracts, or the area with most matters
+        const def = d.areas.find(a => a.name === DEFAULT_AREA && a.total) || d.areas.slice().sort((a, b) => b.total - a.total)[0];
+        selArea = def && def.total ? def.name : ALL;
+      }
       byId('updated').textContent = 'Updated ' + d.updated;
       fillSelects(); drawKpis(); drawDonut(); drawDrill(); drawSubareas(); drawActive(); drawMatters();
       if (chartsReady) drawCharts();
@@ -286,32 +291,34 @@
       return el;
     }).join('');
     const sel = D.areas.find(a => a.name === selArea);
-    const centre = sel ? [sel.total, sel.code || sel.name] : [total, 'matters'];
+    const centre = sel ? [sel.total, sel.code || sel.name] : [total, 'all matters'];
     byId('donut').classList.toggle('has-sel', !!sel);
+    // The centre is a button back to the overview of all open matters
     byId('donut').innerHTML = (total ? slices : `<circle cx="120" cy="120" r="${R}" fill="none" stroke="#eef1f6" stroke-width="30"/>`) +
-      `<text x="120" y="118" text-anchor="middle" font-size="34" font-weight="700" fill="#16324f">${centre[0]}</text>
-       <text x="120" y="142" text-anchor="middle" font-size="12" fill="#66748a">${esc(centre[1])}</text>`;
-    byId('legend').innerHTML = areas.map(a => `<button class="${selArea === a.name ? 'sel' : ''}" onclick="selectArea('${esc(a.name)}')">
+      `<g style="cursor:pointer" onclick="selectArea(ALL)"><title>Show all open matters</title><circle cx="120" cy="120" r="70" fill="transparent"/>
+       <text x="120" y="118" text-anchor="middle" font-size="34" font-weight="700" fill="#16324f">${centre[0]}</text>
+       <text x="120" y="142" text-anchor="middle" font-size="12" fill="#66748a">${esc(centre[1])}</text></g>`;
+    byId('legend').innerHTML = (total ? `<button class="${selArea === ALL ? 'sel' : ''}" onclick="selectArea(ALL)">
+      <i style="background:conic-gradient(#16324f 0 25%, #2a6f97 0 50%, #e9a03b 0 75%, #61a5c2 0)"></i><b>All areas</b><em>${total}</em></button>` : '') +
+      areas.map(a => `<button class="${selArea === a.name ? 'sel' : ''}" onclick="selectArea('${esc(a.name)}')">
       <i style="background:${areaColor(a.name)}"></i>${esc(a.name)}<em>${a.total}</em></button>`).join('') ||
       '<span class="muted">No matters yet.</span>';
   }
 
+  /** Selects an area (and optionally a sub-area). Clicking the selected area again returns to all open matters. */
   function selectArea(name, sub) {
-    selArea = (selArea === name && !sub) ? null : name;
+    selArea = (selArea === name && !sub && !selSub) ? ALL : name;
     selSub = sub || null;
     drawDonut(); drawDrill(); drawSubareas();
   }
 
   function drawDrill() {
     const a = D.areas.find(x => x.name === selArea);
-    if (!a) {
-      byId('drill').innerHTML = `<div class="drill-empty"><b>◔</b><div><b style="font-size:15px;color:var(--ink)">Select an area</b></div>
-        <div class="muted">Click a slice or a name in the list to see the matters, sub-areas and activity.</div></div>`;
-      return;
-    }
+    if (!a) { drawAllOpen(); return; }
     const list = D.matters.filter(m => m.area === a.name && (!selSub || (m.sub || '(not set)') === selSub))
       .sort((x, y) => (x.status === 'Closed') - (y.status === 'Closed') || activity(y) - activity(x));
-    byId('drill').innerHTML = `<h2 style="display:flex;align-items:center;gap:8px"><i style="width:12px;height:12px;border-radius:3px;background:${areaColor(a.name)}"></i>
+    byId('drill').innerHTML = `<button class="btn light small" style="margin-bottom:10px" onclick="selectArea(ALL)">← All open matters</button>
+      <h2 style="display:flex;align-items:center;gap:8px"><i style="width:12px;height:12px;border-radius:3px;background:${areaColor(a.name)}"></i>
         ${esc(a.name)}${selSub ? ' <span class="muted" style="font-size:13px">› ' + esc(selSub) + '</span>' : ''}</h2>
       <div class="chips">
         <div class="chip"><b>${a.open}</b>open</div><div class="chip"><b>${a.closed}</b>closed</div>
@@ -324,7 +331,23 @@
         <td class="num">${m.emails}</td><td class="num">${m.docs}</td></tr>`).join('') ||
         '<tr><td colspan="5" class="muted">No matters.</td></tr>'}</table>
       <div style="margin-top:12px;display:flex;gap:8px"><button class="btn light small" onclick="openMatters('${esc(a.name)}','${esc(selSub || '')}')">
-        Show all ${list.length} in Matters</button><button class="btn light small" onclick="selectArea('${esc(a.name)}')">Clear selection</button></div>`;
+        Show all ${list.length} in Matters</button>${selSub ? `<button class="btn light small" onclick="selectArea('${esc(a.name)}')">All of ${esc(a.name)}</button>` : ''}</div>`;
+  }
+
+  /** Overview of all open matters across areas, nearest deadline first. */
+  function drawAllOpen() {
+    const open = D.matters.filter(m => m.status !== 'Closed')
+      .sort((x, y) => (x.deadline || '9999') < (y.deadline || '9999') ? -1 : 1);
+    byId('drill').innerHTML = `<h2>All open matters</h2>
+      <div class="chips"><div class="chip"><b>${D.k.open}</b>open</div><div class="chip"><b>${D.k.new}</b>new</div>
+        <div class="chip"><b>${D.k.onHold}</b>on hold</div><div class="chip"><b>${fmtN(D.k.emails)}</b>emails</div>
+        <div class="chip"><b>${fmtN(D.k.docs)}</b>documents</div></div>
+      <table><tr><th>Matter</th><th>Title</th><th>Area</th><th>Deadline</th><th>Status</th></tr>
+      ${open.slice(0, 8).map(m => `<tr class="click" onclick="window.open('${esc(m.folder)}','_blank')"><td>${esc(m.no)}</td>
+        <td>${esc(m.title)}</td><td class="muted">${esc(m.area)}</td><td class="${m.overdue ? 'late' : ''}">${esc(m.deadline || '–')}</td>
+        <td>${statusPill(m.status)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No open matters.</td></tr>'}</table>
+      <div style="margin-top:12px"><button class="btn light small" onclick="openMatters('','')">Show all ${open.length} in Matters</button>
+        <span class="muted" style="margin-left:8px">Click an area in the chart to focus on it.</span></div>`;
   }
 
   /** Segmented bar of an area's sub-areas; each segment filters the drill-down. */
@@ -357,17 +380,18 @@
     const V = google.visualization;
     const base = { fontName: 'Inter', chartArea: { left: 170, top: 10, width: '68%', height: '78%' }, legend: { position: 'bottom' },
       hAxis: { minValue: 0, format: '0', gridlines: { color: '#eef1f6' } }, vAxis: { textStyle: { fontSize: 11 } }, bar: { groupWidth: '65%' } };
-    const areas = D.areas.filter(a => a.total > 0).sort((a, b) => (b.emails + b.docs) - (a.emails + a.docs));
+    const areas = D.areas.filter(a => a.emails + a.docs > 0).sort((a, b) => (b.emails + b.docs) - (a.emails + a.docs));
     if (areas.length) {
       const chart = new V.BarChart(byId('c-activity'));
       chart.draw(V.arrayToDataTable([['Area', 'Emails', 'Documents']].concat(areas.map(a => [a.name, a.emails, a.docs]))),
-        Object.assign({}, base, { colors: ['#2a6f97', '#e9a03b'], bar: { groupWidth: '75%' } }));
+        Object.assign({}, base, { colors: ['#2a6f97', '#e9a03b'], bar: { groupWidth: '75%' },
+          hAxis: { format: '0', viewWindow: { min: 0 }, gridlines: { color: '#eef1f6' } } }));
       V.events.addListener(chart, 'select', () => { const s = chart.getSelection()[0]; chart.setSelection([]); if (s && s.row != null) selectArea(areas[s.row].name); });
-    } else byId('c-activity').innerHTML = '<p class="loading">No data yet.</p>';
+    } else byId('c-activity').innerHTML = '<p class="loading">No emails or documents filed yet.</p>';
 
     new V.ColumnChart(byId('c-months')).draw(V.arrayToDataTable([['Month', 'Opened', 'Closed']].concat(D.months.map(m => [m.label, m.opened, m.closed]))),
       { fontName: 'Inter', colors: ['#2a6f97', '#c3ccd8'], legend: { position: 'bottom' }, chartArea: { left: 36, top: 10, width: '90%', height: '72%' },
-        vAxis: { minValue: 0, format: '0', gridlines: { color: '#eef1f6' } }, bar: { groupWidth: '60%' } });
+        vAxis: { format: '0', viewWindow: { min: 0 }, gridlines: { color: '#eef1f6' } }, bar: { groupWidth: '60%' } });
 
     // Workload per owner only makes sense with more than one owner
     const several = D.owners.length > 1;
@@ -400,7 +424,7 @@
   }
 
   function openMatters(area, sub) {
-    byId('f-area').value = area; fillSubFilter(sub); byId('f-status').value = ''; show('matters'); drawMatters();
+    byId('f-area').value = area; fillSubFilter(sub); byId('f-status').value = area ? '' : 'active'; show('matters'); drawMatters();
   }
 
   function drawMatters() {

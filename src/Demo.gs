@@ -44,11 +44,16 @@ function createDemoMatters() {
   const now = new Date();
   const daysAgo = n => new Date(now.getTime() - n * 864e5);
   const me = Session.getEffectiveUser().getEmail();
-  const activity = [], emails = [], sizes = {};
+  const write = (name, width, rows) => {
+    if (!rows.length) return;
+    const sh = sheet_(name);
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, width).setValues(rows);
+  };
   let created = 0;
 
   for (let i = 0; i < 30; i++) {
-    if (Date.now() - start > CFG.MAX_RUN_MS) break;   // stay within Apps Script's 6-minute limit
+    if (Date.now() - start > 3.5 * 60 * 1000) break;   // stay well within Apps Script's 6-minute limit
+    const activity = [], emails = [], sizes = {};
     const area = pick(areas);
     const sub = area.subs.length ? pick(area.subs) : '';
     const pool = DEMO_TITLES[area.code] || DEMO_TITLES.GEN;
@@ -86,17 +91,13 @@ function createDemoMatters() {
         me, '', 'DOC:DEMO:' + res.no + ':' + k, 'Demo']);
     }
     sizes[res.no] = Math.round(((nIn + nOut) * 0.15 + nDocs * 0.8 + Math.random()) * 1048576);
+    // Written per matter, so a run that stops early still leaves complete demo matters
+    write(SHEETS.ACTIVITY, ACTIVITY_COLS.length, activity);
+    write(SHEETS.EMAILS, EMAIL_COLS.length, emails);
+    updateCounts_(sizes);
     created++;
   }
 
-  const write = (name, width, rows) => {
-    if (!rows.length) return;
-    const sh = sheet_(name);
-    sh.getRange(sh.getLastRow() + 1, 1, rows.length, width).setValues(rows);
-  };
-  write(SHEETS.ACTIVITY, ACTIVITY_COLS.length, activity);
-  write(SHEETS.EMAILS, EMAIL_COLS.length, emails);
-  updateCounts_(sizes);
   try { SpreadsheetApp.getUi().alert(created + ' demo matters created.' + (created < 30 ? ' Run it again to create the rest.' : '')); }
   catch (e) { console.log(created + ' demo matters created.'); }
 }

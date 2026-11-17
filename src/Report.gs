@@ -21,8 +21,9 @@ function createReport() {
   sh.clear();
   sh.getCharts().forEach(c => sh.removeChart(c));
   const used = d.areas.filter(a => a.total > 0);
+  const active = used.filter(a => a.emails + a.docs > 0);
   const t1 = [['Area', 'Matters']].concat(used.map(a => [a.name, a.total]));
-  const t2 = [['Area', 'Emails', 'Documents']].concat(used.map(a => [a.name, a.emails, a.docs]));
+  const t2 = [['Area', 'Emails', 'Documents']].concat(active.map(a => [a.name, a.emails, a.docs]));
   const t3 = [['Month', 'Opened', 'Closed']].concat(d.months.map(m => [m.label, m.opened, m.closed]));
   const subRows = [];
   d.areas.filter(a => a.subList.length).forEach(a => Object.keys(a.subs).forEach(s => subRows.push([a.name + ': ' + s, a.subs[s].total])));
@@ -38,11 +39,13 @@ function createReport() {
     ['Matters by area', t1.length > 1, () => sh.newChart().asPieChart().addRange(range(1, t1)).setColors(palette)
       .setOption('pieHole', 0.5).setTitle('Matters by area').setPosition(20, 1, 0, 0).build()],
     ['Emails and documents by area', t2.length > 1, () => sh.newChart().asBarChart().addRange(range(4, t2))
-      .setColors([BRAND.TEAL, BRAND.AMBER]).setTitle('Emails and documents by area').setPosition(20, 8, 0, 0).build()],
-    ['Sub-areas', t4.length > 1, () => sh.newChart().asBarChart().addRange(range(12, t4)).setColors([BRAND.NAVY])
+      .setColors([BRAND.TEAL, BRAND.AMBER]).setOption('hAxis.viewWindow.min', 0).setTitle('Emails and documents by area')
+      .setPosition(20, 8, 0, 0).build()],
+    ['Sub-areas', t4.length > 1, () => sh.newChart().asBarChart().addRange(range(12, t4)).setColors([BRAND.NAVY]).setOption('hAxis.viewWindow.min', 0)
       .setTitle('Matters by sub-area').setPosition(42, 1, 0, 0).build()],
     ['Opened and closed matters', t1.length > 1, () => sh.newChart().asColumnChart().addRange(range(8, t3))
-      .setColors([BRAND.TEAL, '#c3ccd8']).setTitle('Opened and closed matters per month').setPosition(42, 8, 0, 0).build()]
+      .setColors([BRAND.TEAL, '#c3ccd8']).setOption('vAxis.viewWindow.min', 0).setTitle('Opened and closed matters per month')
+      .setPosition(42, 8, 0, 0).build()]
   ];
   const inserted = [];
   charts.forEach(c => {
