@@ -43,6 +43,8 @@ const PRIORITETER = ['Høj', 'Normal', 'Lav'];
 const AKT_TYPER = ['Mail ind', 'Mail ud', 'Dokument oprettet', 'Dokument redigeret', 'Manuel tid'];
 
 const UNDERMAPPER = { MAIL: '01 Korrespondance', DOK: '02 Dokumenter', EKST: '03 Delt med eksterne' };
+/** Originalmails (.eml) lægges i en undermappe, så korrespondancemappen kun viser de læsbare PDF'er. */
+const EML_MAPPE = 'Originaler (.eml)';
 
 /**
  * Standardområder for en juridisk afdeling i et børsnoteret selskab: [navn, kode, underområder].
@@ -253,7 +255,9 @@ function opretSag(d) {
 
     // Deling: team på hele sagen, eksterne kun på "Delt med eksterne"
     const fejl = [];
-    splitMails_([ansvarlig, d.team].join(',')).forEach(m => { try { mappe.addEditor(m); } catch (e) { fejl.push(m); } });
+    const ejer = Session.getEffectiveUser().getEmail().toLowerCase();
+    splitMails_([ansvarlig, d.team].join(',')).filter(m => m !== ejer)
+      .forEach(m => { try { mappe.addEditor(m); } catch (e) { fejl.push(m); } });
     splitMails_(d.eksterne).forEach(m => { try { ekstMappe.addEditor(m); } catch (e) { fejl.push(m); } });
 
     // Sagsnotat
@@ -524,6 +528,7 @@ function arkiverMail_(ctx, sag, m, kilde) {
   const mid = messageId_(m);
   const noegle = 'MAIL:' + mid;
   if (!sag || ctx.set.has(noegle)) return false;
+  if (String(kilde).indexOf('Manuelt') !== 0 && erSystemmail_(m)) return false;
   ctx.set.add(noegle);
   const nr = sag['Sagsnr'];
   ctx.midTilSag[mid] = nr;
@@ -547,9 +552,9 @@ function arkiverMail_(ctx, sag, m, kilde) {
     }
     if (ja(IND.GEM_EML)) {
       try {
-        const f = mappe.createFile(Utilities.newBlob(m.getRawContent(), 'message/rfc822', navn + '.eml'));
+        const f = undermappe_(mappe, EML_MAPPE).createFile(Utilities.newBlob(m.getRawContent(), 'message/rfc822', navn + '.eml'));
         f.setDescription('Sagsstyring:mail-eml ' + mid);
-        emlUrl = f.getUrl();
+        emlUrl = 'https://drive.google.com/uc?export=download&id=' + f.getId();   // hentes og åbnes i et mailprogram
       } catch (e) { console.warn('.eml fejlede: ' + e); }
     }
     if (ja(IND.GEM_VEDH)) {
@@ -703,6 +708,11 @@ function erUdelukket_(ctx, m) {
   if (!ctx.udeluk.length) return false;
   const a = adresser_(m.getFrom()).join(' ');
   return ctx.udeluk.some(u => a.indexOf(u) >= 0);
+}
+
+/** Automatiske beskeder fra Google (deling, kommentarer, kalender) – de nævner sagsnummeret, men er ikke sagsmails. */
+function erSystemmail_(m) {
+  return /(no-?reply|notification)[^@]*@(docs\.|calendar\.)?google\.com/i.test(m.getFrom());
 }
 
 function erMassemail_(m) {

@@ -384,7 +384,7 @@
       <td><span class="retning ${esc(m.retning)}">${esc(m.retning)}</span></td>
       <td>${esc(m.fra)}</td><td class="muted">${esc(m.til)}${m.cc ? '<br>Cc: ' + esc(m.cc) : ''}</td>
       <td>${esc(m.emne || '(intet emne)')}</td><td class="muted">${esc(m.vedh)}</td>
-      <td style="white-space:nowrap">${knap(m.pdf, 'PDF')}${knap(m.eml, '.eml')}${knap(m.gmail, 'Gmail', 'Virker kun, hvis mailen ligger i din egen Gmail')}</td></tr>`;
+      <td style="white-space:nowrap">${knap(m.pdf, 'PDF')}${knap(m.eml, 'Hent .eml', 'Originalmailen – åbnes i Outlook, Apple Mail eller Thunderbird')}${knap(m.gmail, 'Gmail', 'Virker kun, hvis mailen ligger i din egen Gmail')}</td></tr>`;
     let html = '';
     if (byId('m-traade').checked) {
       const grupper = {}, orden = [];
