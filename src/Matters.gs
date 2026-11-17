@@ -5,6 +5,7 @@
 /**
  * Opens a new matter: unique number, folder structure, matter note, sharing and Gmail label.
  * @param {Object} d {title, area, subArea, status, priority, owner, team, external, client, deadline, description}
+ *   external = the counterparty's email addresses; used only to recognise their emails, never shared with
  */
 function createMatter(d) {
   d = d || {};
@@ -25,15 +26,13 @@ function createMatter(d) {
     const folder = DriveApp.getFolderById(ensureAreaFolder_(area)).createFolder(no + ' – ' + d.title);
     folder.setDescription('Legal Matters: ' + no + ' | ' + d.title);
     Object.keys(SUBFOLDERS).forEach(k => folder.createFolder(SUBFOLDERS[k]));
-    const externalFolder = subfolder_(folder, SUBFOLDERS.EXTERNAL);
 
-    // Sharing: the team gets the whole matter, externals only "Shared with externals".
-    // The folder is never shared with its owner – that only triggers a pointless notification email.
+    // Sharing: the team gets the whole matter. The folder is never shared with its owner –
+    // that only triggers a pointless notification email.
     const me = Session.getEffectiveUser().getEmail().toLowerCase();
     const failed = [];
     splitEmails_([owner, d.team].join(',')).filter(m => m !== me)
       .forEach(m => { try { folder.addEditor(m); } catch (e) { failed.push(m); } });
-    splitEmails_(d.external).forEach(m => { try { externalFolder.addEditor(m); } catch (e) { failed.push(m); } });
 
     const noteUrl = createMatterNote_(folder, {
       MATTER_NO: no, TAG: tag, TITLE: d.title, AREA: area.name + (d.subArea ? ' – ' + d.subArea : ''), OWNER: owner,
@@ -44,7 +43,7 @@ function createMatter(d) {
     const row = {
       'Matter no': no, 'Title': d.title, 'Area': area.name, 'Sub-area': area.subs.length ? d.subArea : '',
       'Status': d.status || 'Open', 'Priority': d.priority || 'Normal', 'Owner': owner, 'Team': d.team || '',
-      'External': d.external || '', 'Client/department': d.client || '', 'Opened': now,
+      'External contacts': d.external || '', 'Client/department': d.client || '', 'Opened': now,
       'Deadline': d.deadline ? new Date(d.deadline) : '', 'Closed': '', 'Folder': folder.getUrl(),
       'Folder ID': folder.getId(), 'Description': d.description || '',
       'Emails in': 0, 'Emails out': 0, 'Documents': 0, 'Size (MB)': 0, 'Last sync': ''
@@ -68,16 +67,14 @@ function setStatus(no, status) {
   return true;
 }
 
-/** Shares "Shared with externals" (or the whole matter when internal = true). */
-function shareMatter(no, email, internal) {
+/** Shares the whole matter folder with a colleague and adds them to the team. */
+function shareMatter(no, email) {
   const m = findMatter_(no);
   const folder = DriveApp.getFolderById(m.matter['Folder ID']);
-  const target = internal ? folder : subfolder_(folder, SUBFOLDERS.EXTERNAL);
-  target.addEditor(email.trim());
-  const field = internal ? 'Team' : 'External';
-  const current = String(m.matter[field] || '');
-  m.sh.getRange(m.row, col_(field)).setValue(current ? current + ', ' + email.trim() : email.trim());
-  return target.getUrl();
+  folder.addEditor(email.trim());
+  const current = String(m.matter['Team'] || '');
+  m.sh.getRange(m.row, col_('Team')).setValue(current ? current + ', ' + email.trim() : email.trim());
+  return folder.getUrl();
 }
 
 // ---------- menu actions on the selected row ----------
@@ -95,10 +92,10 @@ function reopenSelected() { const no = selectedMatter_(); if (no) { setStatus(no
 function shareSelected() {
   const no = selectedMatter_(); if (!no) return;
   const ui = SpreadsheetApp.getUi();
-  const res = ui.prompt('Share ' + no + ' with an external', 'Email (Google account). Only the folder "' +
-    SUBFOLDERS.EXTERNAL + '" is shared.', ui.ButtonSet.OK_CANCEL);
+  const res = ui.prompt('Share ' + no + ' with a colleague', 'Email (Google account). The colleague gets edit access to the matter folder.',
+    ui.ButtonSet.OK_CANCEL);
   if (res.getSelectedButton() !== ui.Button.OK || !res.getResponseText()) return;
-  shareMatter(no, res.getResponseText(), false);
+  shareMatter(no, res.getResponseText());
   toast_('Shared with ' + res.getResponseText());
 }
 

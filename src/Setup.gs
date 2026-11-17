@@ -11,7 +11,7 @@ function onOpen() {
     .addItem('Show email tag for selected matter', 'showTagForSelected')
     .addItem('Close selected matter', 'closeSelected')
     .addItem('Reopen selected matter', 'reopenSelected')
-    .addItem('Share selected matter with an external…', 'shareSelected')
+    .addItem('Share selected matter with a colleague…', 'shareSelected')
     .addSeparator()
     .addItem('Sync emails and documents now', 'syncAll')
     .addItem('Create Slides report', 'createReportFromMenu')

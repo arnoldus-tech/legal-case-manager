@@ -14,7 +14,7 @@ A lightweight matter intake and management system for an in-house legal team, bu
 | **"Unfiled" queue** | Emails with weak signals (a matter's external contact, the same company domain, or a subject resembling the matter title) are suggested in a personal queue – visible only to the mailbox owner – where they can be filed, turned into a new matter, or dismissed |
 | **Email list** | Per matter or across matters: date, direction, from, to, subject, attachments; sortable, filterable, grouped by conversation, with full-text search in filed emails and attachments |
 | **Dashboard** | Open / new / on-hold / recently closed matters, an interactive donut by area with drill-down to sub-areas and matters, emails and documents by area, opened vs. closed per month, workload per owner and the most active matters. **Only counted figures – no estimated hours** |
-| **Collaboration** | Team members get access to the whole matter; external parties only to the `03 Shared with externals` subfolder |
+| **Collaboration** | Team members get access to the matter folder. A matter's external contacts are recorded only to recognise their emails – nothing is shared outside the team |
 | **Reporting** | One click builds a Google Slides deck with key figures, charts linked to the register and matter lists |
 
 ## Architecture
@@ -33,8 +33,7 @@ Drive  <root>/
  ├─ 01 Matters/<Area>/<Matter no> – <Title>/
  │     ├─ 01 Correspondence/   filed emails (PDF) and attachments
  │     │     └─ Originals (.eml)/
- │     ├─ 02 Documents/
- │     └─ 03 Shared with externals/
+ │     └─ 02 Documents/
  ├─ 02 Reports/      generated Slides reports
  └─ 03 Templates/    matter note templates
 

@@ -21,7 +21,7 @@ const SHEETS = {
   SETTINGS: 'Settings', REPORT: 'Report data'
 };
 
-const MATTER_COLS = ['Matter no', 'Title', 'Area', 'Sub-area', 'Status', 'Priority', 'Owner', 'Team', 'External',
+const MATTER_COLS = ['Matter no', 'Title', 'Area', 'Sub-area', 'Status', 'Priority', 'Owner', 'Team', 'External contacts',
   'Client/department', 'Opened', 'Deadline', 'Closed', 'Folder', 'Folder ID', 'Description',
   'Emails in', 'Emails out', 'Documents', 'Size (MB)', 'Last sync'];
 const AREA_COLS = ['Area', 'Code', 'Folder ID', 'Folder', 'Sub-areas'];
@@ -40,7 +40,7 @@ const ACT = {
 const SYSTEM_FOLDER = '00 System';
 /** Folders that setup ensures exist in the root folder. Key = Script Property. */
 const MAIN_FOLDERS = { MATTERS_FOLDER_ID: '01 Matters', REPORTS_FOLDER_ID: '02 Reports', TEMPLATES_FOLDER_ID: '03 Templates' };
-const SUBFOLDERS = { MAIL: '01 Correspondence', DOCS: '02 Documents', EXTERNAL: '03 Shared with externals' };
+const SUBFOLDERS = { MAIL: '01 Correspondence', DOCS: '02 Documents' };
 /** Original emails (.eml) go into a subfolder so the correspondence folder shows only readable PDFs. */
 const EML_FOLDER = 'Originals (.eml)';
 

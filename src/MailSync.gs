@@ -180,7 +180,7 @@ function suggest_(ctx, m) {
   const out = [];
   ctx.matters.forEach(mt => {
     if (mt['Status'] === 'Closed' || (mt['Opened'] && new Date(mt['Opened']).getTime() > date)) return;
-    const ext = addresses_(mt['External']);
+    const ext = addresses_(mt['External contacts']);
     let score = 0; const reasons = [];
     if (addrs.some(a => ext.indexOf(a) >= 0)) { score += 3; reasons.push('contact on the matter'); }
     else if (domains.some(d => ext.some(e => e.split('@')[1] === d))) { score += 2; reasons.push('same domain as a matter contact'); }

@@ -210,7 +210,7 @@
       <label>Owner (email)<input type="email" name="owner" id="n-owner"></label>
       <label>Client / department<input name="client" placeholder="e.g. Procurement"></label>
       <label>Team (emails, comma-separated)<input name="team" placeholder="colleague@company.com, …"></label>
-      <label class="wide">External parties (emails – access only to "03 Shared with externals")<input name="external" placeholder="counsel@lawfirm.com"></label>
+      <label class="wide">External contacts (emails – used to recognise their emails; nothing is shared with them)<input name="external" placeholder="counsel@lawfirm.com"></label>
       <label class="wide">Description<textarea name="description" placeholder="Background and desired outcome"></textarea></label>
       <div class="wide"><button class="btn" id="createBtn">Create matter</button></div>
     </form>
@@ -427,12 +427,10 @@
   }
 
   function share(no) {
-    const input = prompt('Share ' + no + ' with (Google account email).\nPrefix with "internal:" to share the whole matter with a colleague, e.g. internal:colleague@company.com');
-    if (!input) return;
-    const internal = input.trim().toLowerCase().startsWith('internal:');
-    const email = input.replace(/^internal:/i, '').trim();
+    const email = (prompt('Share ' + no + ' with a colleague (Google account email):') || '').trim();
+    if (!email) return;
     google.script.run.withSuccessHandler(url => notice(`${esc(no)} is shared with ${esc(email)}. <a href="${esc(url)}" target="_blank">Open folder</a>`))
-      .withFailureHandler(fail).shareMatter(no, email, internal);
+      .withFailureHandler(fail).shareMatter(no, email);
   }
 
   // ---------- emails ----------

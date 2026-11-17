@@ -32,9 +32,10 @@ Never touched: conversations labelled `Private`, excluded domains (see the Setti
 - Each team member opens the register once and chooses **⚖️ Matters → Enable automatic email sync for me**. The same email in several inboxes is only filed once.
 - Enter the team's addresses or company domain under **Settings → Internal addresses/domains**, so incoming and outgoing emails are told apart.
 
-## External collaboration
+## Sharing
 
-External parties only get access to **03 Shared with externals** on the individual matter. Share from the intake form, the **Share** button in the matter list or the menu. External parties need a Google account.
+The team members entered on a matter get edit access to its folder. To add a colleague later, use **Share** in the matter list or the menu.
+External contacts are recorded on the matter only so that their emails can be recognised – nothing is shared with them.
 
 ## Customising
 
