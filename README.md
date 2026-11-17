@@ -1,85 +1,93 @@
-# Legal Case Manager for Google Workspace
+# Legal Matter Manager for Google Workspace
 
-A lightweight matter intake and case management system for a small in-house legal team, built entirely on Google Workspace: **Sheets** as the register, **Drive** for matter folders, **Gmail** for correspondence, **Docs** for matter notes and **Slides** for reporting – glued together with Google Apps Script.
+A lightweight matter intake and management system for an in-house legal team, built entirely on Google Workspace: **Sheets** as the register, **Drive** for matter folders, **Gmail** for correspondence, **Docs** for matter notes and **Slides** for reporting – glued together with Google Apps Script.
 
-> Status: working prototype / mock-up. The UI and documentation for end users are in Danish; code comments are mostly Danish.
+> Status: working prototype. All data in screenshots and demos is fictitious.
 
 ## What it does
 
-| Area | Functionality |
+| | |
 |---|---|
-| **Intake** | Web form creates a matter with a unique number (`KON-2026-0007` = area code, year, running number), a Drive folder structure, a matter note (from an optional template) and a Gmail label |
-| **Matter areas** | 15 default areas for the legal function of a listed company (capital markets, corporate, governance, M&A, commercial contracts, IT, IP, employment, data protection, export control, compliance, competition, ESG, disputes, general). Areas can have sub-areas – commercial contracts are split into *sales*, *procurement* and *collaboration*, and IP into patents, trademarks, licences and *NDAs* – each area has its own Drive folder |
-| **Email filing** | Emails are filed automatically when the matter number is in the subject, when sent to a plus address (`sager+KON-2026-0007@…`), when the thread is already filed, or when they reply to a filed email (`In-Reply-To` / `References`). Archived as PDF + original `.eml` + attachments, labelled in Gmail and logged. De-duplicated across team mailboxes via `Message-ID` |
-| **Email list** | Per matter or across all matters: date, direction, from, to, subject, attachments; sortable columns, filters, grouping by conversation, and full-text search in archived emails and attachments (via Drive search) |
+| **Intake** | A web form opens a matter with a unique number (`COM-2026-0007` = area code, year, running number), a Drive folder structure, a matter note (from an optional template) and a Gmail label |
+| **Matter areas** | 15 default areas for the legal function of a listed company – capital markets, corporate, governance, M&A, commercial contracts, IT, IP, employment, data protection, export control, compliance, competition, ESG, disputes and general advice. Areas can have sub-areas: commercial contracts are split into *Sales*, *Procurement* and *Collaboration*; IP into patents, trademarks, licensing and *NDAs* |
+| **Email filing without tags** | Emails are filed automatically when they reply to a filed email (`In-Reply-To` / `References`), belong to a filed conversation, are sent to a plus address (`legal+COM-2026-0007@…`) or mention the matter number. Filed as PDF + original `.eml` + attachments, labelled in Gmail and de-duplicated across team mailboxes via `Message-ID`. Google system notifications are never filed |
 | **"Unfiled" queue** | Emails with weak signals (a matter's external contact, the same company domain, or a subject resembling the matter title) are suggested in a personal queue – visible only to the mailbox owner – where they can be filed, turned into a new matter, or dismissed |
-| **Documents** | Files in the matter folder are registered; Google Docs edits are counted per day |
-| **Time estimate** | Effort is *estimated* from logged emails and documents using configurable rates, plus optional manual time entries |
-| **Dashboard** | Open/closed matters, distribution by area, overdue deadlines, workload per lawyer, estimated time by area and activity type, most time-consuming matters |
-| **Collaboration** | Team members get access to the whole matter; external parties only to the `03 Delt med eksterne` (shared with externals) subfolder |
-| **Reporting** | One click builds a Google Slides deck with KPIs, charts linked to the register, and matter lists |
+| **Email list** | Per matter or across matters: date, direction, from, to, subject, attachments; sortable, filterable, grouped by conversation, with full-text search in filed emails and attachments |
+| **Dashboard** | Open / new / on-hold / recently closed matters, an interactive donut by area with drill-down to sub-areas and matters, emails and documents by area, opened vs. closed per month, workload per owner and the most active matters. **Only counted figures – no estimated hours** |
+| **Collaboration** | Team members get access to the whole matter; external parties only to the `03 Shared with externals` subfolder |
+| **Reporting** | One click builds a Google Slides deck with key figures, charts linked to the register and matter lists |
 
 ## Architecture
 
 ```
-Google Sheet "Sagsregister" (bound Apps Script)
- ├─ Sager            one row per matter
- ├─ Områder          legal areas + Drive folder IDs
- ├─ Aktivitet        activity log (emails, documents, status changes, time)
- ├─ Indstillinger    rates and options
- └─ Rapportdata      generated chart data for Slides
+Google Sheet "Matter register" (bound Apps Script)
+ ├─ Matters        one row per matter, incl. email/document counts and folder size
+ ├─ Areas          matter areas, sub-areas and Drive folder IDs
+ ├─ Activity       log of emails, documents and status changes (de-duplication keys)
+ ├─ Emails         one row per filed email – the email list
+ ├─ Settings       options (PDF/.eml/attachments, internal domains, private label, exclusions)
+ └─ Report data    generated chart data for Slides
 
-Drive  Sagsstyring/
+Drive  <root>/
  ├─ 00 System/       the register
- ├─ 01 Sager/<Area>/<Matter-no> – <Title>/
- │     ├─ 01 Korrespondance   archived emails
- │     ├─ 02 Dokumenter
- │     └─ 03 Delt med eksterne
- ├─ 02 Rapporter/    generated Slides reports
- └─ 03 Skabeloner/   matter note templates
+ ├─ 01 Matters/<Area>/<Matter no> – <Title>/
+ │     ├─ 01 Correspondence/   filed emails (PDF) and attachments
+ │     │     └─ Originals (.eml)/
+ │     ├─ 02 Documents/
+ │     └─ 03 Shared with externals/
+ ├─ 02 Reports/      generated Slides reports
+ └─ 03 Templates/    matter note templates
 
-Gmail  label "Sager/<Matter-no>" per matter
-Web app (HtmlService + Google Charts): dashboard, matter list, intake form
+Gmail  label "Matters/<Matter no>" per matter
+Web app (HtmlService): dashboard, matters, emails, unfiled queue, intake form
 ```
+
+| Source file | Responsibility |
+|---|---|
+| `Config.gs` | Constants: sheets, columns, default areas, settings |
+| `Setup.gs` | Menu, one-time setup, triggers, sheet formatting |
+| `Matters.gs` | Intake, status, sharing, matter numbers, matter note |
+| `MailSync.gs` | Email recognition and filing, document sync, counts, unfiled queue, email list |
+| `Dashboard.gs` | Web app entry point and dashboard data |
+| `Report.gs` | Google Slides report |
+| `Demo.gs` | Demo data and area reset |
+| `App.html` | The web app (dashboard, lists, forms) |
 
 ## Design principles
 
 - **Least privilege.** Each user syncs only their own mailbox, under their own authorisation. No domain-wide delegation or service account with access to everyone's email.
-- **Staged reading.** New emails are classified from headers only (subject, addresses, thread references). The body is fetched only when an email is filed. Threads labelled `Privat`, excluded domains and newsletters/automated mail are skipped.
+- **Staged reading.** New emails are classified from headers only (subject, addresses, thread references). The body is fetched only when an email is filed. Threads labelled `Private`, excluded domains, newsletters and automated mail are skipped.
 - **Private by default.** The "Unfiled" queue is stored in each user's own User Properties, never in the shared register.
+- **Objective figures.** The dashboard and report show counts and sizes – not estimated time.
 - **No hard-coded IDs.** Setup discovers or creates the folder structure and stores IDs in Script Properties, so the code can be deployed to any Drive.
-- **Estimates are labelled as estimates** – everywhere they are shown.
 
 ## Roadmap
 
-Email filing is being redesigned to work like matter-centric email management in legal DMS platforms, so that users do **not** have to remember a subject tag:
-
-1. ~~**Thread recognition**~~ ✅ and ~~**"Unfiled" queue**~~ ✅
-2. **Gmail add-on** – "File to matter" and "Create matter from this email" in the Gmail side panel
-3. **Contact register** – a dedicated contacts tab per matter, so contact matches can be filed automatically instead of suggested, and AI-assisted suggestions for the queue
-4. ~~**Searchable email list per matter**~~ ✅ and **"Get this email in my Gmail"** (re-import the archived `.eml` so a colleague can reply in the original thread – e.g. during holidays), with per-matter deputies
-5. **Confidential matters** – separate register and folder, access approved by the responsible lawyer and the head of legal
-6. **AI triage** – suggested area, priority, deadline and summary for new matters (data governance to be defined first)
+1. ~~Thread recognition and "Unfiled" queue~~ ✅ · ~~Email list per matter~~ ✅ · ~~Interactive dashboard~~ ✅
+2. **AI triage** – suggested area, sub-area, priority, deadline and summary for new matters and unfiled emails, with human approval
+3. **"Get this email in my Gmail"** – re-import the archived `.eml` so a colleague can reply in the original thread (e.g. during holidays), with per-matter deputies
+4. **Contact register** per matter, so contact matches can be filed automatically instead of suggested
+5. **Gmail add-on** – "File to matter" and "Create matter from this email" in the Gmail side panel
+6. **Confidential matters** – separate register and folder, access approved by the responsible lawyer and the head of legal
 
 ## Setup
 
 Prerequisites: a Google account, [Node.js](https://nodejs.org/) and [clasp](https://github.com/google/clasp).
 
-1. Create a Google Sheet (e.g. `Sagsstyring/00 System/Sagsregister`) and open **Extensions → Apps Script**. Copy the script ID from **Project Settings**.
+1. In Drive, create a folder (e.g. `Legal`) with a subfolder `00 System`, and a Google Sheet in it (e.g. `Matter register`).
 2. Enable the Apps Script API at <https://script.google.com/home/usersettings>.
-3. Clone this repo, then:
+3. Clone this repo, then bind it to the sheet:
    ```bash
    npm install -g @google/clasp
    clasp login
-   cp .clasp.json.example .clasp.json   # paste your script ID
+   clasp create-script --parentId <spreadsheet-id> --rootDir src   # or copy .clasp.json.example to .clasp.json
    clasp push
    ```
-4. Reload the sheet and run **⚖️ Sagsstyring → Opsætning (kør første gang)**. Setup creates the tabs and folders, and installs a 15-minute sync trigger.
-5. Optional: **Deploy → New deployment → Web app** (execute as *user accessing*, access *anyone with a Google account*). Only users with access to the register can see any data.
+4. Reload the sheet and run **⚖️ Matters → Setup (run first)**. Setup creates the sheets and folders and installs a 15-minute sync trigger.
+5. Optional: **⚖️ Matters → Demo → Create demo matters** fills the system with 30 fictitious matters.
+6. Optional: **Deploy → New deployment → Web app** (execute as *user accessing*, access *anyone with a Google account*). Only users with access to the register can see any data.
 
-`Testdata.gs` contains `opretTestsager()` / `sletTestsager()` to create and remove 20 demo matters.
-
-End-user guide (Danish): [docs/VEJLEDNING.md](docs/VEJLEDNING.md)
+User guide: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
 
 ## Troubleshooting
 
@@ -87,7 +95,7 @@ End-user guide (Danish): [docs/VEJLEDNING.md](docs/VEJLEDNING.md)
 
 ## Privacy note
 
-All matter data stays in the user's own Google account/Workspace. The repository contains code only – no register data, no email, and no IDs. `.clasp.json` (script binding) and `.clasprc.json` (credentials) are git-ignored.
+All matter data stays in the user's own Google account/Workspace. The repository contains code only – no register data, no email and no IDs. `.clasp.json` (script binding) and `.clasprc.json` (credentials) are git-ignored.
 
 ## Licence
 

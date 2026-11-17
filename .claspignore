@@ -1,6 +1,2 @@
-# Push only the Apps Script sources in src/ (clasp rootDir is src)
-**/**
-!Code.gs
-!App.html
-!Testdata.gs
-!appsscript.json
+# clasp rootDir is src – push all Apps Script sources in it
+**/*.md

@@ -1,470 +1,566 @@
 <!DOCTYPE html>
-<html lang="da">
+<html lang="en">
 <head>
 <base target="_top">
 <meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/charts/loader.js"></script>
 <style>
-  :root { --bg:#f6f8fb; --kort:#fff; --tekst:#1d2733; --dæmpet:#5f6b7a; --linje:#e3e8ef; --primær:#1f4e79; --accent:#2e86ab; --rød:#c8553d; --grøn:#59a96a; --gul:#f2a541; }
+  :root {
+    --bg:#f4f6fa; --card:#fff; --ink:#0f1f33; --muted:#66748a; --line:#e4e8ef;
+    --navy:#16324f; --teal:#2a6f97; --sky:#61a5c2; --amber:#e9a03b; --red:#c8553d; --green:#3f8f6b;
+    --shadow:0 1px 2px rgba(16,32,51,.04), 0 4px 16px rgba(16,32,51,.06);
+  }
   * { box-sizing:border-box; }
-  body { margin:0; font-family: "Segoe UI", Roboto, Arial, sans-serif; background:var(--bg); color:var(--tekst); font-size:14px; }
-  header { background:var(--primær); color:#fff; padding:12px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; position:sticky; top:0; z-index:5; }
-  header h1 { font-size:17px; margin:0; font-weight:600; }
-  nav { display:flex; gap:4px; }
-  nav button { background:transparent; color:#cfe0f0; border:0; padding:7px 12px; border-radius:6px; cursor:pointer; font-size:14px; }
-  nav button.aktiv { background:rgba(255,255,255,.16); color:#fff; }
-  header .hoejre { margin-left:auto; display:flex; gap:10px; align-items:center; font-size:12px; color:#cfe0f0; }
-  main { padding:18px 20px 40px; max-width:1400px; margin:0 auto; }
-  .vis { display:none; } .vis.aktiv { display:block; }
-  .kpi { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px; }
-  .kpi div { background:var(--kort); border:1px solid var(--linje); border-radius:10px; padding:12px 14px; }
-  .kpi b { display:block; font-size:26px; color:var(--primær); font-variant-numeric:tabular-nums; }
-  .kpi span { color:var(--dæmpet); font-size:12px; }
-  .kpi .advar b { color:var(--rød); }
-  .gitter { display:grid; grid-template-columns:repeat(auto-fit,minmax(420px,1fr)); gap:14px; }
-  .kort { background:var(--kort); border:1px solid var(--linje); border-radius:10px; padding:12px 14px; min-width:0; }
-  .kort h2 { font-size:14px; margin:0 0 4px; } .kort p.under { margin:0 0 6px; color:var(--dæmpet); font-size:12px; }
-  .diagram { height:300px; }
+  body { margin:0; font-family:Inter, "Segoe UI", Roboto, Arial, sans-serif; background:var(--bg); color:var(--ink); font-size:14px; }
+  a { color:var(--teal); }
+  header { background:var(--navy); color:#fff; padding:12px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; position:sticky; top:0; z-index:5; }
+  header h1 { font-size:17px; margin:0; font-weight:700; letter-spacing:.2px; display:flex; align-items:center; gap:8px; }
+  header h1 span { opacity:.6; font-weight:500; font-size:12px; }
+  nav { display:flex; gap:2px; }
+  nav button { background:transparent; color:#c7d4e3; border:0; padding:8px 13px; border-radius:8px; cursor:pointer; font:inherit; font-weight:500; }
+  nav button:hover { color:#fff; }
+  nav button.active { background:rgba(255,255,255,.14); color:#fff; }
+  .right { margin-left:auto; display:flex; gap:10px; align-items:center; font-size:12px; color:#c7d4e3; }
+  main { padding:22px 24px 48px; max-width:1440px; margin:0 auto; }
+  .view { display:none; } .view.active { display:block; }
+
+  .kpis { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:14px; margin-bottom:18px; }
+  .kpi { background:var(--card); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow); }
+  .kpi b { display:block; font-size:30px; font-weight:700; color:var(--navy); line-height:1.1; font-variant-numeric:tabular-nums; }
+  .kpi span { color:var(--muted); font-size:12px; font-weight:500; }
+  .kpi small { display:block; color:var(--muted); font-size:11px; margin-top:4px; }
+  .kpi.hero { background:linear-gradient(135deg, var(--navy), var(--teal)); }
+  .kpi.hero b, .kpi.hero span, .kpi.hero small { color:#fff; }
+
+  .grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; margin-bottom:16px; }
+  .card { background:var(--card); border-radius:14px; padding:18px 20px; box-shadow:var(--shadow); min-width:0; }
+  .card h2 { font-size:15px; margin:0; font-weight:600; }
+  .card .sub { color:var(--muted); font-size:12px; margin:3px 0 12px; }
+  .chart { height:300px; }
+
+  .donutwrap { display:flex; gap:18px; align-items:center; }
+  .donut { width:240px; height:240px; flex:none; }
+  .donut circle.slice { fill:none; stroke-width:30; cursor:pointer; transition:stroke-width .15s, opacity .15s; }
+  .donut circle.slice:hover { stroke-width:36; }
+  .donut.has-sel circle.slice:not(.sel) { opacity:.28; }
+  .donut text { font-family:Inter, Arial, sans-serif; }
+  .legend { flex:1; display:flex; flex-direction:column; gap:2px; max-height:250px; overflow:auto; }
+  .legend button { display:flex; align-items:center; gap:8px; background:none; border:0; padding:5px 8px; border-radius:8px; cursor:pointer; font:inherit; font-size:13px; color:var(--ink); text-align:left; }
+  .legend button:hover, .legend button.sel { background:#eef3f8; }
+  .legend i { width:10px; height:10px; border-radius:3px; flex:none; }
+  .legend em { margin-left:auto; font-style:normal; color:var(--muted); font-variant-numeric:tabular-nums; }
+
+  .drill-empty { color:var(--muted); display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; min-height:260px; text-align:center; gap:6px; }
+  .drill-empty b { font-size:28px; color:var(--line); }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
+  .chip { background:#f1f4f9; border-radius:10px; padding:7px 11px; font-size:12px; color:var(--muted); }
+  .chip b { display:block; font-size:17px; color:var(--navy); }
+  .seg { display:flex; height:12px; border-radius:6px; overflow:hidden; background:#eef1f6; margin:6px 0 8px; }
+  .seg div { height:100%; cursor:pointer; }
+  .seglegend { display:flex; flex-wrap:wrap; gap:6px 12px; font-size:12px; }
+  .seglegend button { background:none; border:0; padding:2px 4px; border-radius:6px; cursor:pointer; font:inherit; font-size:12px; color:var(--ink); display:flex; align-items:center; gap:6px; }
+  .seglegend button:hover, .seglegend button.sel { background:#eef3f8; }
+  .seglegend i { width:9px; height:9px; border-radius:2px; }
+  .subarea { padding:10px 0; border-bottom:1px solid var(--line); } .subarea:last-child { border-bottom:0; }
+  .subarea h3 { font-size:13px; margin:0; font-weight:600; display:flex; justify-content:space-between; }
+  .subarea h3 span { color:var(--muted); font-weight:500; }
+
   table { width:100%; border-collapse:collapse; font-size:13px; }
-  th, td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--linje); vertical-align:middle; }
-  th { color:var(--dæmpet); font-weight:600; font-size:12px; background:#fafbfd; position:sticky; top:0; }
-  th.sort { cursor:pointer; user-select:none; } th.sort:hover { color:var(--primær); }
-  tr.traad { background:#f4f7fb; cursor:pointer; } tr.traad td { font-weight:600; }
-  tr.i-traad td:first-child { padding-left:22px; }
-  .retning { display:inline-block; width:34px; text-align:center; border-radius:8px; font-size:11px; padding:1px 0; }
-  .retning.Ind { background:#e5f3ea; } .retning.Ud { background:#eef0fb; }
-  .muted { color:var(--dæmpet); font-size:12px; }
-  td.tal, th.tal { text-align:right; font-variant-numeric:tabular-nums; }
-  .tabelboks { overflow:auto; max-height:70vh; border:1px solid var(--linje); border-radius:10px; background:var(--kort); }
-  .pille { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; background:#eef3f8; }
-  .st-Ny { background:#fff4e0; } .st-Åben { background:#e5f3ea; } .st-Afventer { background:#eef0fb; } .st-Lukket { background:#f0f0f0; color:#777; }
-  .rod { color:var(--rød); font-weight:600; }
-  .filtre { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
-  input, select, textarea { font:inherit; padding:7px 9px; border:1px solid #c9d2dd; border-radius:6px; background:#fff; color:inherit; }
+  th, td { text-align:left; padding:8px 9px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.4px; background:#fafbfd; position:sticky; top:0; }
+  th.sort { cursor:pointer; user-select:none; } th.sort:hover { color:var(--navy); }
+  td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  tr.click { cursor:pointer; } tr.click:hover td { background:#f7f9fc; }
+  .tablebox { overflow:auto; max-height:70vh; border-radius:14px; background:var(--card); box-shadow:var(--shadow); }
+  .muted { color:var(--muted); font-size:12px; }
+  .pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:12px; font-weight:500; background:#eef1f6; border:0; font-family:inherit; }
+  .st-New { background:#fff3dc; color:#8a5a00; } .st-Open { background:#e3f2ea; color:#24654a; }
+  .st-Onhold { background:#e9ecfb; color:#3b4a9b; } .st-Closed { background:#f0f0f0; color:#777; }
+  .late { color:var(--red); font-weight:600; }
+  .dir { display:inline-block; width:36px; text-align:center; border-radius:8px; font-size:11px; padding:1px 0; font-weight:600; }
+  .dir.In { background:#e3f2ea; color:#24654a; } .dir.Out { background:#e9ecfb; color:#3b4a9b; }
+  tr.thread { background:#f4f7fb; cursor:pointer; } tr.thread td { font-weight:600; }
+  tr.in-thread td:first-child { padding-left:24px; }
+
+  .filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
+  input, select, textarea { font:inherit; padding:8px 10px; border:1px solid #cfd7e3; border-radius:8px; background:#fff; color:inherit; }
   textarea { min-height:90px; width:100%; }
-  button.knap { background:var(--accent); color:#fff; border:0; padding:8px 14px; border-radius:6px; cursor:pointer; font:inherit; }
-  button.knap.lys { background:#eef3f8; color:var(--primær); }
-  button.lille { padding:4px 8px; font-size:12px; }
-  button:disabled { opacity:.6; cursor:wait; }
-  form.ny { max-width:760px; display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
-  form.ny label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--dæmpet); }
-  form.ny .bred { grid-column:1 / -1; }
-  .besked { margin:12px 0; padding:12px 14px; border-radius:8px; background:#e5f3ea; border:1px solid #bfe0c9; }
-  .besked.fejl { background:#fce8e6; border-color:#f3c1bb; }
-  .tag { font-family:Consolas, monospace; background:#fff; border:1px dashed var(--accent); padding:2px 6px; border-radius:4px; }
-  .indlaes { color:var(--dæmpet); padding:30px; text-align:center; }
-  a { color:var(--accent); }
-  .badge { display:inline-block; min-width:18px; padding:0 5px; border-radius:9px; background:var(--gul); color:#1d2733; font-size:11px; font-weight:600; text-align:center; }
+  .btn { background:var(--teal); color:#fff; border:0; padding:9px 15px; border-radius:8px; cursor:pointer; font:inherit; font-weight:500; text-decoration:none; display:inline-block; }
+  .btn.light { background:#eef3f8; color:var(--navy); }
+  header .btn.light { background:rgba(255,255,255,.14); color:#fff; }
+  .btn.small { padding:4px 9px; font-size:12px; }
+  .btn:disabled { opacity:.6; cursor:wait; }
+  form.new { max-width:780px; display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; background:var(--card); padding:22px; border-radius:14px; box-shadow:var(--shadow); }
+  form.new label { display:flex; flex-direction:column; gap:5px; font-size:12px; color:var(--muted); font-weight:500; }
+  form.new .wide { grid-column:1 / -1; }
+  .notice { margin:0 0 14px; padding:12px 16px; border-radius:10px; background:#e3f2ea; border:1px solid #bfe0c9; }
+  .notice.error { background:#fcebe7; border-color:#f3c1bb; }
+  .tag { font-family:Consolas, monospace; background:#fff; border:1px dashed var(--teal); padding:2px 6px; border-radius:4px; }
+  .loading { color:var(--muted); padding:30px; text-align:center; }
+  .badge { display:inline-block; min-width:18px; padding:0 5px; border-radius:9px; background:var(--amber); color:#1d2733; font-size:11px; font-weight:700; text-align:center; }
   .badge:empty { display:none; }
-  .forslag { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
-  .forslag button { text-align:left; }
-  .forslag small { color:var(--dæmpet); }
-  .knyt { display:flex; gap:6px; margin-top:6px; }
-  .knyt select { max-width:260px; padding:4px 6px; font-size:12px; }
-  @media (max-width:700px) { form.ny { grid-template-columns:1fr; } .gitter { grid-template-columns:1fr; } }
+  .suggest { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
+  .suggest small { color:var(--muted); }
+  @media (max-width:1100px) { .kpis { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+  @media (max-width:800px) { .grid, form.new { grid-template-columns:1fr; } .kpis { grid-template-columns:repeat(2, minmax(0,1fr)); } .donutwrap { flex-direction:column; } }
 </style>
 </head>
 <body>
 <header>
-  <h1>⚖️ Sagsstyring</h1>
+  <h1>⚖️ Legal Matters <span>in-house legal</span></h1>
   <nav>
-    <button data-vis="dashboard">Dashboard</button>
-    <button data-vis="sager">Sager</button>
-    <button data-vis="mails">Mails</button>
-    <button data-vis="udensag">Uden sag <span id="koeAntal" class="badge"></span></button>
-    <button data-vis="ny">Ny sag</button>
+    <button data-view="dashboard">Dashboard</button>
+    <button data-view="matters">Matters</button>
+    <button data-view="emails">Emails</button>
+    <button data-view="unfiled">Unfiled <span id="unfiledCount" class="badge"></span></button>
+    <button data-view="new">New matter</button>
   </nav>
-  <div class="hoejre">
-    <span id="opdateret"></span>
-    <button class="knap lys lille" onclick="hent()">Opdatér</button>
-    <button class="knap lys lille" id="rapportKnap" onclick="rapport()">Lav Slides-rapport</button>
+  <div class="right">
+    <span id="updated"></span>
+    <button class="btn light small" onclick="load()">Refresh</button>
+    <button class="btn light small" id="reportBtn" onclick="report()">Slides report</button>
   </div>
 </header>
 
 <main>
-  <div id="global"></div>
+  <div id="notice"></div>
 
   <!-- DASHBOARD -->
-  <section class="vis" id="vis-dashboard">
-    <div class="kpi" id="kpi"><div class="indlaes">Henter data…</div></div>
-    <div class="gitter">
-      <div class="kort"><h2>Fordeling på sagsområder</h2><p class="under">Alle sager</p><div id="d-omr" class="diagram"></div></div>
-      <div class="kort"><h2>Fordeling på underområder</h2><p class="under">Sager og estimerede timer pr. underområde</p><div id="d-under" class="diagram"></div></div>
-      <div class="kort"><h2>Hvad bruges tiden på?</h2><p class="under">Estimerede timer pr. område, opdelt på mails og dokumentarbejde</p><div id="d-tid" class="diagram"></div></div>
-      <div class="kort"><h2>Tid fordelt på aktivitetstype</h2><p class="under">Estimerede timer i alt</p><div id="d-typer" class="diagram"></div></div>
-      <div class="kort"><h2>Oprettede og lukkede sager</h2><p class="under">Seneste 12 måneder</p><div id="d-mdr" class="diagram"></div></div>
-      <div class="kort"><h2>Åbne sager pr. ansvarlig</h2><p class="under">Arbejdsbyrde</p><div id="d-ansv" class="diagram"></div></div>
-      <div class="kort"><h2>Mest tidskrævende sager</h2><p class="under">Top 10, estimat</p><div id="t-top"></div></div>
+  <section class="view" id="view-dashboard">
+    <div class="kpis" id="kpis"><div class="loading">Loading…</div></div>
+    <div class="grid">
+      <div class="card">
+        <h2>Matters by area</h2><p class="sub">Click an area to see its matters</p>
+        <div class="donutwrap"><svg class="donut" id="donut" viewBox="0 0 240 240"></svg><div class="legend" id="legend"></div></div>
+      </div>
+      <div class="card" id="drill"></div>
     </div>
-    <p class="under" style="color:var(--dæmpet);font-size:12px;margin-top:14px">
-      Timer er estimater ud fra mails med [sagsnr] i emnefeltet og dokumenter i sagsmapperne, vægtet med satserne i fanen "Indstillinger".
-    </p>
+    <div class="grid">
+      <div class="card"><h2>Emails and documents by area</h2><p class="sub">Filed on matters – counted, not estimated</p><div id="c-activity" class="chart"></div></div>
+      <div class="card"><h2>Sub-areas</h2><p class="sub">Areas that are split further</p><div id="subareas"></div></div>
+    </div>
+    <div class="grid">
+      <div class="card"><h2>Opened and closed matters</h2><p class="sub">Last 12 months</p><div id="c-months" class="chart"></div></div>
+      <div class="card"><h2>Open matters by owner</h2><p class="sub">Workload</p><div id="c-owners" class="chart"></div></div>
+    </div>
+    <div class="card"><h2>Most active matters</h2><p class="sub">By number of emails and documents</p><div id="t-active"></div></div>
   </section>
 
-  <!-- SAGER -->
-  <section class="vis" id="vis-sager">
-    <div class="filtre">
-      <input id="f-sog" placeholder="Søg i sagsnr, titel, klient, modpart…" style="flex:1;min-width:220px" oninput="tegnSager()">
-      <select id="f-omr" onchange="tegnSager()"><option value="">Alle områder</option></select>
-      <select id="f-status" onchange="tegnSager()"><option value="aktive">Aktive sager</option><option value="">Alle statusser</option></select>
-      <select id="f-ansv" onchange="tegnSager()"><option value="">Alle ansvarlige</option></select>
+  <!-- MATTERS -->
+  <section class="view" id="view-matters">
+    <div class="filters">
+      <input id="f-q" placeholder="Search matter no, title, client…" style="flex:1;min-width:220px" oninput="drawMatters()">
+      <select id="f-area" onchange="fillSubFilter(); drawMatters()"><option value="">All areas</option></select>
+      <select id="f-sub" onchange="drawMatters()" style="display:none"></select>
+      <select id="f-status" onchange="drawMatters()"><option value="active">Active matters</option><option value="">All statuses</option></select>
+      <select id="f-owner" onchange="drawMatters()"><option value="">All owners</option></select>
     </div>
-    <div class="tabelboks"><table>
-      <thead><tr><th>Sagsnr</th><th>Titel</th><th>Område</th><th>Status</th><th>Ansvarlig</th><th>Frist</th>
-        <th class="tal">Mails</th><th class="tal">Dok.</th><th class="tal">Timer</th><th>Handlinger</th></tr></thead>
-      <tbody id="t-sager"></tbody>
+    <div class="tablebox"><table>
+      <thead><tr><th>Matter</th><th>Title</th><th>Area</th><th>Status</th><th>Owner</th><th>Deadline</th>
+        <th class="num">Emails</th><th class="num">Docs</th><th class="num">MB</th><th></th></tr></thead>
+      <tbody id="t-matters"></tbody>
     </table></div>
-    <p id="antal" style="color:var(--dæmpet);font-size:12px"></p>
+    <p id="mattersCount" class="muted"></p>
   </section>
 
-  <!-- MAILS -->
-  <section class="vis" id="vis-mails">
-    <div class="filtre" style="align-items:center">
-      <select id="m-sag" onchange="hentMails()"><option value="">Alle sager</option></select>
-      <input id="m-filter" placeholder="Filtrér på afsender, modtager, emne, vedhæftning…" style="flex:1;min-width:220px" oninput="tegnMails()">
-      <select id="m-retning" onchange="tegnMails()"><option value="">Ind og ud</option><option>Ind</option><option>Ud</option></select>
-      <label class="muted" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="m-traade" onchange="tegnMails()"> Saml i tråde</label>
+  <!-- EMAILS -->
+  <section class="view" id="view-emails">
+    <div class="filters">
+      <select id="e-matter" onchange="loadEmails()"><option value="">All matters</option></select>
+      <input id="e-filter" placeholder="Filter by sender, recipient, subject, attachment…" style="flex:1;min-width:220px" oninput="drawEmails()">
+      <select id="e-dir" onchange="drawEmails()"><option value="">In and out</option><option>In</option><option>Out</option></select>
+      <label class="muted" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="e-threads" onchange="drawEmails()"> Group by conversation</label>
     </div>
-    <div class="filtre" style="align-items:center">
-      <input id="m-indhold" placeholder="Søg i mailtekst og vedhæftninger…" style="flex:1;min-width:220px" onkeydown="if(event.key==='Enter')soegIndhold()">
-      <button class="knap lys lille" onclick="soegIndhold()">Søg i indhold</button>
-      <button class="knap lys lille" id="m-nulstil" style="display:none" onclick="nulstilIndhold()">Ryd søgning</button>
+    <div class="filters">
+      <input id="e-content" placeholder="Search email text and attachments…" style="flex:1;min-width:220px" onkeydown="if(event.key==='Enter')searchContent()">
+      <button class="btn light small" onclick="searchContent()">Search content</button>
+      <button class="btn light small" id="e-clear" style="display:none" onclick="clearContent()">Clear search</button>
     </div>
-    <div class="tabelboks"><table>
-      <thead><tr id="m-hoved"></tr></thead>
-      <tbody id="t-mails"><tr><td class="indlaes">Henter…</td></tr></tbody>
+    <div class="tablebox"><table>
+      <thead><tr id="e-head"></tr></thead>
+      <tbody id="t-emails"><tr><td class="loading">Loading…</td></tr></tbody>
     </table></div>
-    <p id="m-antal" class="muted"></p>
+    <p id="emailsCount" class="muted"></p>
   </section>
 
-  <!-- UDEN SAG -->
-  <section class="vis" id="vis-udensag">
-    <div class="filtre" style="align-items:center">
-      <span style="color:var(--dæmpet);font-size:13px;flex:1;min-width:240px">
-        Mails fra <b>din egen</b> indbakke, som kan høre til en sag. Kun du kan se denne liste.
-        Når du knytter en mail, følger resten af tråden og fremtidige svar automatisk med.
-      </span>
-      <button class="knap lys lille" id="synkKnap" onclick="synkNu()">Synkronisér nu</button>
+  <!-- UNFILED -->
+  <section class="view" id="view-unfiled">
+    <div class="filters">
+      <span class="muted" style="flex:1;min-width:240px">Emails from <b>your own</b> inbox that may belong to a matter. Only you can see this list.
+        When you file an email, the rest of the conversation and future replies follow automatically.</span>
+      <button class="btn light small" id="syncBtn" onclick="syncNow()">Sync now</button>
     </div>
-    <div class="tabelboks"><table>
-      <thead><tr><th>Dato</th><th>Fra</th><th>Emne</th><th>Forslag</th><th></th></tr></thead>
-      <tbody id="t-koe"><tr><td colspan="5" class="indlaes">Henter…</td></tr></tbody>
+    <div class="tablebox"><table>
+      <thead><tr><th>Date</th><th>From</th><th>Subject</th><th>Suggestions</th><th></th></tr></thead>
+      <tbody id="t-unfiled"><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
     </table></div>
   </section>
 
-  <!-- NY SAG -->
-  <section class="vis" id="vis-ny">
-    <form class="ny" id="nyForm" onsubmit="opret(event)">
-      <label class="bred">Titel *<input name="titel" required placeholder="Fx Leverandøraftale med NordLog A/S"></label>
-      <label>Sagsområde *<select name="omraade" id="ny-omr" required onchange="visUnder()"></select></label>
-      <label id="ny-under-felt" style="display:none">Underområde *<select name="underomraade" id="ny-under"></select></label>
-      <label>Status<select name="status"><option>Ny</option><option selected>Åben</option><option>Afventer</option></select></label>
-      <label>Prioritet<select name="prioritet"><option>Høj</option><option selected>Normal</option><option>Lav</option></select></label>
-      <label>Frist<input type="date" name="frist"></label>
-      <label>Ansvarlig (e-mail)<input type="email" name="ansvarlig" id="ny-ansv"></label>
-      <label>Klient / afdeling<input name="klient" placeholder="Fx Indkøb"></label>
-      <label>Team (e-mails, komma-separeret)<input name="team" placeholder="kollega@firma.dk, …"></label>
-      <label class="bred">Eksterne (e-mails – får kun adgang til mappen "03 Delt med eksterne")<input name="eksterne" placeholder="advokat@ekstern.dk"></label>
-      <label class="bred">Beskrivelse<textarea name="beskrivelse" placeholder="Kort beskrivelse af sagen, baggrund og ønsket resultat"></textarea></label>
-      <div class="bred"><button class="knap" id="opretKnap">Opret sag</button></div>
+  <!-- NEW MATTER -->
+  <section class="view" id="view-new">
+    <form class="new" id="newForm" onsubmit="createMatterSubmit(event)">
+      <label class="wide">Title *<input name="title" required placeholder="e.g. Supply agreement with NordLog A/S"></label>
+      <label>Area *<select name="area" id="n-area" required onchange="showSubArea()"></select></label>
+      <label id="n-sub-field" style="display:none">Sub-area *<select name="subArea" id="n-sub"></select></label>
+      <label>Status<select name="status"><option>New</option><option selected>Open</option><option>On hold</option></select></label>
+      <label>Priority<select name="priority"><option>High</option><option selected>Normal</option><option>Low</option></select></label>
+      <label>Deadline<input type="date" name="deadline"></label>
+      <label>Owner (email)<input type="email" name="owner" id="n-owner"></label>
+      <label>Client / department<input name="client" placeholder="e.g. Procurement"></label>
+      <label>Team (emails, comma-separated)<input name="team" placeholder="colleague@company.com, …"></label>
+      <label class="wide">External parties (emails – access only to "03 Shared with externals")<input name="external" placeholder="counsel@lawfirm.com"></label>
+      <label class="wide">Description<textarea name="description" placeholder="Background and desired outcome"></textarea></label>
+      <div class="wide"><button class="btn" id="createBtn">Create matter</button></div>
     </form>
-    <div id="ny-resultat"></div>
+    <div id="newResult" style="max-width:780px;margin-top:14px"></div>
   </section>
 </main>
 
 <script>
-  const START_VIS = '<?= view ?>';
-  const FARVER = ['#1f4e79','#2e86ab','#59a96a','#f2a541','#c8553d','#7b6d8d','#4f5d75','#9bc1bc','#e07a5f'];
-  let D = null, chartsKlar = false;
+  const START_VIEW = '<?= view ?>';
+  const PALETTE = ['#16324f','#2a6f97','#61a5c2','#e9a03b','#c8553d','#7b6d8d','#3f8f6b','#9bc1bc','#e07a5f','#5c677d','#b5838d','#6d9dc5','#a3b18a','#d4a373','#457b9d'];
+  let D = null, chartsReady = false, selArea = null, selSub = null;
+  let E = null, contentHits = null, eSort = { field: 'date', asc: false };
+  let U = null, pendingEmail = null;
 
-  google.charts.load('current', { packages: ['corechart'], language: 'da' });
-  google.charts.setOnLoadCallback(() => { chartsKlar = true; if (D) tegnDashboard(); });
+  google.charts.load('current', { packages: ['corechart'] });
+  google.charts.setOnLoadCallback(() => { chartsReady = true; if (D) drawCharts(); });
 
-  document.querySelectorAll('nav button').forEach(b => b.onclick = () => skift(b.dataset.vis));
-  function skift(v) {
-    document.querySelectorAll('nav button').forEach(b => b.classList.toggle('aktiv', b.dataset.vis === v));
-    document.querySelectorAll('.vis').forEach(s => s.classList.toggle('aktiv', s.id === 'vis-' + v));
-    if (v === 'dashboard' && D && chartsKlar) tegnDashboard();
-    if (v === 'udensag') hentKoe();
-    if (v === 'mails' && !M) hentMails();
-  }
-  skift(START_VIS);
-
+  const byId = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  function besked(html, fejl) { document.getElementById('global').innerHTML = html ? `<div class="besked ${fejl ? 'fejl' : ''}">${html}</div>` : ''; }
-  function fejl(e) { besked('Fejl: ' + esc(e && e.message ? e.message : e), true); }
+  const fmtN = n => Number(n || 0).toLocaleString('en-GB');
+  function notice(html, isError) { byId('notice').innerHTML = html ? `<div class="notice ${isError ? 'error' : ''}">${html}</div>` : ''; }
+  function fail(e) { notice('Error: ' + esc(e && e.message ? e.message : e), true); }
+  const areaColor = name => PALETTE[Math.max(0, D.areas.findIndex(a => a.name === name)) % PALETTE.length];
+  const statusPill = s => `<span class="pill st-${esc(String(s).replace(' ', ''))}">${esc(s)}</span>`;
+  const activity = m => m.emailsIn + m.emailsOut + m.docs;
 
-  function hent() {
+  document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.view));
+  function show(v) {
+    document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+    document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
+    if (v === 'dashboard' && D && chartsReady) drawCharts();
+    if (v === 'unfiled') loadUnfiled();
+    if (v === 'emails' && !E) loadEmails();
+  }
+  show(START_VIEW === 'new' ? 'new' : 'dashboard');
+
+  function load() {
     google.script.run.withSuccessHandler(d => {
       D = d;
-      document.getElementById('opdateret').textContent = 'Opdateret ' + d.opdateret;
-      udfyldValg();
-      tegnKpi();
-      if (chartsKlar) tegnDashboard();
-      tegnSager();
-    }).withFailureHandler(fejl).getDashboardData();
+      byId('updated').textContent = 'Updated ' + d.updated;
+      fillSelects(); drawKpis(); drawDonut(); drawDrill(); drawSubareas(); drawActive(); drawMatters();
+      if (chartsReady) drawCharts();
+    }).withFailureHandler(fail).getDashboardData();
   }
 
-  function udfyldValg() {
-    const opt = (arr) => arr.map(x => `<option>${esc(x)}</option>`).join('');
-    const mSag = byId('m-sag'), glSag = mSag.value;
-    mSag.innerHTML = '<option value="">Alle sager</option>' + D.sager.slice().sort((a, b) => a.nr < b.nr ? 1 : -1)
-      .map(s => `<option value="${esc(s.nr)}">${esc(s.nr)} ${esc(s.titel)}</option>`).join('');
-    mSag.value = glSag;
-    const nyOmr = document.getElementById('ny-omr'), glOmr = nyOmr.value;
-    nyOmr.innerHTML = opt(D.omrNavne); if (glOmr) nyOmr.value = glOmr;
-    visUnder();
-    document.getElementById('f-omr').innerHTML = '<option value="">Alle områder</option>' + opt(D.omrNavne);
-    const ansv = [...new Set(D.sager.map(s => s.ansvarlig).filter(Boolean))].sort();
-    const fa = document.getElementById('f-ansv'), gl = fa.value;
-    fa.innerHTML = '<option value="">Alle ansvarlige</option>' + opt(ansv); fa.value = gl;
-    const na = document.getElementById('ny-ansv'); if (!na.value) na.value = D.bruger || '';
-  }
-
-  function visUnder() {
-    const navn = byId('ny-omr').value, liste = (D && D.omrUnder && D.omrUnder[navn]) || [];
-    const felt = byId('ny-under-felt'), sel = byId('ny-under');
-    felt.style.display = liste.length ? '' : 'none';
-    sel.required = !!liste.length;
-    sel.innerHTML = liste.length ? '<option value="">Vælg…</option>' + liste.map(u => `<option>${esc(u)}</option>`).join('') : '';
-  }
-
-  function tegnKpi() {
+  // ---------- dashboard ----------
+  function drawKpis() {
     const k = D.k;
-    const kort = [[k.total,'Sager i alt'],[k.aabne,'Åbne sager'],[k.lukkede,'Lukkede sager'],[k.nye,'Nye (intake)'],
-      [k.afventer,'Afventer'],[k.overskredet,'Overskredne frister', k.overskredet > 0],[k.oprettet30,'Oprettet seneste 30 dage'],
-      [k.lukket30,'Lukket seneste 30 dage'],[k.timer.toLocaleString('da-DK'),'Estimerede timer i alt']];
-    document.getElementById('kpi').innerHTML = kort.map(x => `<div class="${x[2] ? 'advar' : ''}"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('');
+    byId('kpis').innerHTML = [
+      ['hero', k.open, 'Open matters', `of ${fmtN(k.total)} in total`],
+      ['', k.new, 'New (intake)', 'awaiting triage'],
+      ['', k.onHold, 'On hold', 'waiting for others'],
+      ['', k.closed30, 'Closed', 'last 30 days'],
+      ['', k.emails, 'Emails filed', 'in and out'],
+      ['', k.docs, 'Documents', fmtN(k.sizeMb) + ' MB stored']
+    ].map(x => `<div class="kpi ${x[0]}"><b>${fmtN(x[1])}</b><span>${x[2]}</span><small>${x[3]}</small></div>`).join('');
   }
 
-  function tegnDashboard() {
+  /** Donut drawn as SVG circles with dash arrays – no chart library, so clicks don't flicker. */
+  function drawDonut() {
+    const areas = D.areas.filter(a => a.total > 0);
+    const total = areas.reduce((t, a) => t + a.total, 0);
+    const R = 88, C = 2 * Math.PI * R, gap = areas.length > 1 ? 2 : 0;
+    let offset = 0;
+    const slices = areas.map(a => {
+      const len = total ? a.total / total * C : 0;
+      const el = `<circle class="slice ${selArea === a.name ? 'sel' : ''}" cx="120" cy="120" r="${R}" stroke="${areaColor(a.name)}"
+        stroke-dasharray="${Math.max(len - gap, 0.5)} ${C}" stroke-dashoffset="${-offset}" transform="rotate(-90 120 120)"
+        onclick="selectArea('${esc(a.name)}')"><title>${esc(a.name)}: ${a.total}</title></circle>`;
+      offset += len;
+      return el;
+    }).join('');
+    const sel = D.areas.find(a => a.name === selArea);
+    const centre = sel ? [sel.total, sel.code || sel.name] : [total, 'matters'];
+    byId('donut').classList.toggle('has-sel', !!sel);
+    byId('donut').innerHTML = (total ? slices : `<circle cx="120" cy="120" r="${R}" fill="none" stroke="#eef1f6" stroke-width="30"/>`) +
+      `<text x="120" y="118" text-anchor="middle" font-size="34" font-weight="700" fill="#16324f">${centre[0]}</text>
+       <text x="120" y="142" text-anchor="middle" font-size="12" fill="#66748a">${esc(centre[1])}</text>`;
+    byId('legend').innerHTML = areas.map(a => `<button class="${selArea === a.name ? 'sel' : ''}" onclick="selectArea('${esc(a.name)}')">
+      <i style="background:${areaColor(a.name)}"></i>${esc(a.name)}<em>${a.total}</em></button>`).join('') ||
+      '<span class="muted">No matters yet.</span>';
+  }
+
+  function selectArea(name, sub) {
+    selArea = (selArea === name && !sub) ? null : name;
+    selSub = sub || null;
+    drawDonut(); drawDrill(); drawSubareas();
+  }
+
+  function drawDrill() {
+    const a = D.areas.find(x => x.name === selArea);
+    if (!a) {
+      byId('drill').innerHTML = `<div class="drill-empty"><b>◔</b><div><b style="font-size:15px;color:var(--ink)">Select an area</b></div>
+        <div class="muted">Click a slice or a name in the list to see the matters, sub-areas and activity.</div></div>`;
+      return;
+    }
+    const list = D.matters.filter(m => m.area === a.name && (!selSub || (m.sub || '(not set)') === selSub))
+      .sort((x, y) => (x.status === 'Closed') - (y.status === 'Closed') || activity(y) - activity(x));
+    byId('drill').innerHTML = `<h2 style="display:flex;align-items:center;gap:8px"><i style="width:12px;height:12px;border-radius:3px;background:${areaColor(a.name)}"></i>
+        ${esc(a.name)}${selSub ? ' <span class="muted" style="font-size:13px">› ' + esc(selSub) + '</span>' : ''}</h2>
+      <div class="chips">
+        <div class="chip"><b>${a.open}</b>open</div><div class="chip"><b>${a.closed}</b>closed</div>
+        <div class="chip"><b>${fmtN(a.emailsIn + a.emailsOut)}</b>emails</div><div class="chip"><b>${fmtN(a.docs)}</b>documents</div>
+        <div class="chip"><b>${fmtN(a.sizeMb)}</b>MB</div></div>
+      ${a.subList.length ? subBar(a) : ''}
+      <table><tr><th>Matter</th><th>Title</th><th>Status</th><th class="num">Emails</th><th class="num">Docs</th></tr>
+      ${list.slice(0, 8).map(m => `<tr class="click" onclick="window.open('${esc(m.folder)}','_blank')"><td>${esc(m.no)}</td>
+        <td>${esc(m.title)}${m.sub ? `<div class="muted">${esc(m.sub)}</div>` : ''}</td><td>${statusPill(m.status)}</td>
+        <td class="num">${m.emailsIn + m.emailsOut}</td><td class="num">${m.docs}</td></tr>`).join('') ||
+        '<tr><td colspan="5" class="muted">No matters.</td></tr>'}</table>
+      <div style="margin-top:12px;display:flex;gap:8px"><button class="btn light small" onclick="openMatters('${esc(a.name)}','${esc(selSub || '')}')">
+        Show all ${list.length} in Matters</button><button class="btn light small" onclick="selectArea('${esc(a.name)}')">Clear selection</button></div>`;
+  }
+
+  /** Segmented bar of an area's sub-areas; each segment filters the drill-down. */
+  function subBar(a) {
+    const keys = a.subList.concat(Object.keys(a.subs).filter(s => a.subList.indexOf(s) < 0)).filter(s => a.subs[s]);
+    const total = keys.reduce((t, s) => t + a.subs[s].total, 0) || 1;
+    const col = i => PALETTE[(i * 3 + 1) % PALETTE.length];
+    return `<div class="seg">${keys.map((s, i) => `<div title="${esc(s)}: ${a.subs[s].total}" style="width:${a.subs[s].total / total * 100}%;background:${col(i)}"
+        onclick="selectArea('${esc(a.name)}','${esc(s)}')"></div>`).join('')}</div>
+      <div class="seglegend">${keys.map((s, i) => `<button class="${selArea === a.name && selSub === s ? 'sel' : ''}"
+        onclick="selectArea('${esc(a.name)}','${esc(s)}')"><i style="background:${col(i)}"></i>${esc(s)} <b>${a.subs[s].total}</b></button>`).join('')}</div>`;
+  }
+
+  function drawSubareas() {
+    const withSubs = D.areas.filter(a => a.subList.length);
+    byId('subareas').innerHTML = withSubs.map(a => `<div class="subarea"><h3>${esc(a.name)}<span>${a.total} matters</span></h3>${a.total ? subBar(a) : '<div class="muted">No matters yet.</div>'}</div>`).join('') ||
+      '<p class="muted">No areas have sub-areas. Add them in the Areas sheet (comma-separated).</p>';
+  }
+
+  function drawActive() {
+    const top = D.matters.filter(m => activity(m) > 0).sort((a, b) => activity(b) - activity(a)).slice(0, 10);
+    byId('t-active').innerHTML = top.length ? `<table><tr><th>Matter</th><th>Area</th><th>Status</th><th class="num">Emails in</th><th class="num">Emails out</th><th class="num">Documents</th><th class="num">MB</th></tr>` +
+      top.map(m => `<tr class="click" onclick="window.open('${esc(m.folder)}','_blank')"><td><b>${esc(m.no)}</b> ${esc(m.title)}</td>
+        <td>${esc(m.area)}${m.sub ? ' · ' + esc(m.sub) : ''}</td><td>${statusPill(m.status)}</td>
+        <td class="num">${m.emailsIn}</td><td class="num">${m.emailsOut}</td><td class="num">${m.docs}</td><td class="num">${fmtN(m.sizeMb)}</td></tr>`).join('') + '</table>'
+      : '<p class="loading">No activity yet.</p>';
+  }
+
+  function drawCharts() {
     const V = google.visualization;
-    const basis = { chartArea: { left: 10, top: 10, width: '95%', height: '85%' }, colors: FARVER, fontName: 'Segoe UI', legend: { position: 'right' } };
-    const omr = D.omraader.filter(o => o.total > 0);
+    const base = { fontName: 'Inter', chartArea: { left: 170, top: 10, width: '68%', height: '78%' }, legend: { position: 'bottom' },
+      hAxis: { minValue: 0, format: '0', gridlines: { color: '#eef1f6' } }, vAxis: { textStyle: { fontSize: 11 } }, bar: { groupWidth: '65%' } };
+    const areas = D.areas.filter(a => a.total > 0).sort((a, b) => (b.emailsIn + b.emailsOut + b.docs) - (a.emailsIn + a.emailsOut + a.docs));
+    if (areas.length) {
+      const chart = new V.BarChart(byId('c-activity'));
+      chart.draw(V.arrayToDataTable([['Area', 'Emails in', 'Emails out', 'Documents']].concat(areas.map(a => [a.name, a.emailsIn, a.emailsOut, a.docs]))),
+        Object.assign({}, base, { isStacked: true, colors: ['#2a6f97', '#61a5c2', '#e9a03b'] }));
+      V.events.addListener(chart, 'select', () => { const s = chart.getSelection()[0]; chart.setSelection([]); if (s && s.row != null) selectArea(areas[s.row].name); });
+    } else byId('c-activity').innerHTML = '<p class="loading">No data yet.</p>';
 
-    // Underområder (fx salg / indkøb)
-    const uf = D.underfordeling || [];
-    const dU = V.arrayToDataTable([['Underområde', 'Sager', 'Timer']].concat(uf.map(u => [u.omraade + ': ' + u.under, u.sager, u.timer])));
-    tom('d-under', uf.length) || new V.BarChart(byId('d-under')).draw(dU, Object.assign({}, basis, {
-      colors: ['#1f4e79', '#f2a541'], legend: { position: 'bottom' }, chartArea: { left: 260, top: 10, width: '55%', height: '75%' },
-      hAxis: { minValue: 0 } }));
+    new V.ColumnChart(byId('c-months')).draw(V.arrayToDataTable([['Month', 'Opened', 'Closed']].concat(D.months.map(m => [m.label, m.opened, m.closed]))),
+      { fontName: 'Inter', colors: ['#2a6f97', '#c3ccd8'], legend: { position: 'bottom' }, chartArea: { left: 36, top: 10, width: '90%', height: '72%' },
+        vAxis: { minValue: 0, format: '0', gridlines: { color: '#eef1f6' } }, bar: { groupWidth: '60%' } });
 
-    // Fordeling på område
-    const d1 = V.arrayToDataTable([['Område','Sager']].concat(omr.map(o => [o.navn, o.total])));
-    tom('d-omr', omr.length) || new V.PieChart(byId('d-omr')).draw(d1, Object.assign({}, basis, { pieHole: .5 }));
-
-    // Tid pr. område stablet pr. aktivitetstype
-    const medTid = D.omraader.filter(o => o.timer > 0).sort((a, b) => b.timer - a.timer);
-    const d2 = V.arrayToDataTable([['Område'].concat(D.aktTyper)].concat(medTid.map(o => [o.navn].concat(D.aktTyper.map(t => o.typer[t] || 0)))));
-    tom('d-tid', medTid.length) || new V.BarChart(byId('d-tid')).draw(d2, Object.assign({}, basis, {
-      isStacked: true, legend: { position: 'bottom' }, chartArea: { left: 140, top: 10, width: '70%', height: '75%' },
-      hAxis: { title: 'Timer', minValue: 0 } }));
-
-    // Aktivitetstyper
-    const typer = Object.keys(D.typer).filter(t => D.typer[t] > 0);
-    const d3 = V.arrayToDataTable([['Aktivitet','Timer']].concat(typer.map(t => [t, D.typer[t]])));
-    tom('d-typer', typer.length) || new V.PieChart(byId('d-typer')).draw(d3, Object.assign({}, basis, { pieHole: .5 }));
-
-    // Måneder
-    const d4 = V.arrayToDataTable([['Måned','Oprettet','Lukket']].concat(D.maaneder.map(m => [m.label, m.oprettet, m.lukket])));
-    new V.ColumnChart(byId('d-mdr')).draw(d4, Object.assign({}, basis, { colors: ['#2e86ab','#9aa0a6'],
-      legend: { position: 'bottom' }, chartArea: { left: 40, top: 10, width: '90%', height: '70%' }, vAxis: { minValue: 0, format: '0' } }));
-
-    // Ansvarlige
-    const d5 = V.arrayToDataTable([['Ansvarlig','Åbne sager']].concat(D.ansvarlig.map(a => [a.navn, a.antal])));
-    tom('d-ansv', D.ansvarlig.length) || new V.BarChart(byId('d-ansv')).draw(d5, Object.assign({}, basis, {
-      legend: { position: 'none' }, colors: ['#1f4e79'], chartArea: { left: 180, top: 10, width: '65%', height: '85%' }, hAxis: { minValue: 0, format: '0' } }));
-
-    // Top 10
-    const top = D.sager.filter(s => s.timer > 0).sort((a, b) => b.timer - a.timer).slice(0, 10);
-    byId('t-top').innerHTML = top.length ? `<table><tr><th>Sag</th><th>Område</th><th class="tal">Mails</th><th class="tal">Dok.</th><th class="tal">Timer</th></tr>` +
-      top.map(s => `<tr><td><a href="${esc(s.mappe)}" target="_blank">${esc(s.nr)}</a> ${esc(s.titel)}</td><td>${esc(s.omraade)}</td>
-        <td class="tal">${s.mails}</td><td class="tal">${s.dok}</td><td class="tal">${s.timer}</td></tr>`).join('') + '</table>'
-      : '<p class="indlaes">Ingen registreret aktivitet endnu.</p>';
+    if (D.owners.length) new V.BarChart(byId('c-owners')).draw(V.arrayToDataTable([['Owner', 'Open matters']].concat(D.owners.map(o => [o.name, o.count]))),
+      Object.assign({}, base, { legend: { position: 'none' }, colors: ['#16324f'], chartArea: { left: 200, top: 10, width: '62%', height: '85%' } }));
+    else byId('c-owners').innerHTML = '<p class="loading">No open matters.</p>';
   }
-  const byId = id => document.getElementById(id);
-  function tom(id, n) { if (n) return false; byId(id).innerHTML = '<p class="indlaes">Ingen data endnu.</p>'; return true; }
 
-  function tegnSager() {
+  // ---------- matters ----------
+  function fillSelects() {
+    const opt = arr => arr.map(x => `<option>${esc(x)}</option>`).join('');
+    const keep = (id, html) => { const el = byId(id), v = el.value; el.innerHTML = html; if (v) el.value = v; };
+    keep('f-area', '<option value="">All areas</option>' + opt(D.areaNames));
+    keep('f-owner', '<option value="">All owners</option>' + opt([...new Set(D.matters.map(m => m.owner).filter(Boolean))].sort()));
+    keep('f-status', '<option value="active">Active matters</option><option value="">All statuses</option>' + opt(D.statuses));
+    keep('e-matter', '<option value="">All matters</option>' + D.matters.slice().sort((a, b) => a.no < b.no ? 1 : -1)
+      .map(m => `<option value="${esc(m.no)}">${esc(m.no)} ${esc(m.title)}</option>`).join(''));
+    keep('n-area', opt(D.areaNames));
+    fillSubFilter(); showSubArea();
+    if (!byId('n-owner').value) byId('n-owner').value = D.user || '';
+  }
+
+  function fillSubFilter(sub) {
+    const subs = D.areaSubs[byId('f-area').value] || [];
+    const el = byId('f-sub');
+    el.style.display = subs.length ? '' : 'none';
+    el.innerHTML = '<option value="">All sub-areas</option>' + subs.map(s => `<option>${esc(s)}</option>`).join('');
+    if (sub) el.value = sub;
+  }
+
+  function openMatters(area, sub) {
+    byId('f-area').value = area; fillSubFilter(sub); byId('f-status').value = ''; show('matters'); drawMatters();
+  }
+
+  function drawMatters() {
     if (!D) return;
-    const q = byId('f-sog').value.toLowerCase(), o = byId('f-omr').value, st = byId('f-status').value, a = byId('f-ansv').value;
-    const rows = D.sager.filter(s =>
-      (!o || s.omraade === o) && (!a || s.ansvarlig === a) &&
-      (st === '' || (st === 'aktive' ? s.status !== 'Lukket' : s.status === st)) &&
-      (!q || [s.nr, s.titel, s.klient, s.modpart, s.ansvarlig].join(' ').toLowerCase().includes(q)))
-      .sort((x, y) => x.nr < y.nr ? 1 : -1);
-    const statusValg = nr => D.statuser.map(x => `<option ${x === nr ? 'selected' : ''}>${x}</option>`).join('');
-    byId('t-sager').innerHTML = rows.map(s => `<tr>
-      <td><a href="${esc(s.mappe)}" target="_blank"><b>${esc(s.nr)}</b></a></td>
-      <td>${esc(s.titel)}${s.klient ? `<br><span style="color:var(--dæmpet);font-size:12px">${esc(s.klient)}${s.modpart ? ' / ' + esc(s.modpart) : ''}</span>` : ''}</td>
-      <td>${esc(s.omraade)}${s.under ? `<br><span style="color:var(--dæmpet);font-size:12px">${esc(s.under)}</span>` : ''}</td>
-      <td><select class="pille st-${esc(s.status)}" onchange="status('${esc(s.nr)}', this)">${statusValg(s.status)}</select></td>
-      <td>${esc(s.ansvarlig)}</td>
-      <td class="${s.overskredet ? 'rod' : ''}">${esc(s.frist)}</td>
-      <td class="tal">${s.mails}</td><td class="tal">${s.dok}</td><td class="tal">${s.timer}</td>
+    const q = byId('f-q').value.toLowerCase(), area = byId('f-area').value, sub = byId('f-sub').value, st = byId('f-status').value, owner = byId('f-owner').value;
+    const rows = D.matters.filter(m => (!area || m.area === area) && (!sub || m.sub === sub) && (!owner || m.owner === owner) &&
+      (st === '' || (st === 'active' ? m.status !== 'Closed' : m.status === st)) &&
+      (!q || [m.no, m.title, m.client, m.owner].join(' ').toLowerCase().includes(q))).sort((a, b) => a.no < b.no ? 1 : -1);
+    const statusOptions = s => D.statuses.map(x => `<option ${x === s ? 'selected' : ''}>${x}</option>`).join('');
+    byId('t-matters').innerHTML = rows.map(m => `<tr>
+      <td><a href="${esc(m.folder)}" target="_blank"><b>${esc(m.no)}</b></a></td>
+      <td>${esc(m.title)}${m.client ? `<div class="muted">${esc(m.client)}</div>` : ''}</td>
+      <td>${esc(m.area)}${m.sub ? `<div class="muted">${esc(m.sub)}</div>` : ''}</td>
+      <td><select class="pill st-${esc(String(m.status).replace(' ', ''))}" onchange="setStatusUi('${esc(m.no)}', this)">${statusOptions(m.status)}</select></td>
+      <td>${esc(m.owner)}</td><td class="${m.overdue ? 'late' : ''}">${esc(m.deadline)}</td>
+      <td class="num">${m.emailsIn + m.emailsOut}</td><td class="num">${m.docs}</td><td class="num">${fmtN(m.sizeMb)}</td>
       <td style="white-space:nowrap">
-        <button class="knap lys lille" onclick="kopier('[${esc(s.nr)}]')" title="Kopiér mail-tag">Tag</button>
-        <a class="knap lys lille" style="text-decoration:none;display:inline-block" target="_blank"
-           href="https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent('[' + s.nr + '] ' + s.titel)}">Ny mail</a>
-        <button class="knap lys lille" onclick="visMails('${esc(s.nr)}')">Mails</button>
-        <button class="knap lys lille" onclick="del('${esc(s.nr)}')">Del</button>
-      </td></tr>`).join('') || '<tr><td colspan="10" class="indlaes">Ingen sager matcher.</td></tr>';
-    byId('antal').textContent = rows.length + ' af ' + D.sager.length + ' sager';
+        <button class="btn light small" onclick="viewEmails('${esc(m.no)}')">Emails</button>
+        <a class="btn light small" target="_blank" href="https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent('[' + m.no + '] ' + m.title)}">New email</a>
+        <button class="btn light small" onclick="share('${esc(m.no)}')">Share</button>
+      </td></tr>`).join('') || '<tr><td colspan="10" class="loading">No matters match.</td></tr>';
+    byId('mattersCount').textContent = rows.length + ' of ' + D.matters.length + ' matters';
   }
 
-  function status(nr, sel) {
+  function setStatusUi(no, sel) {
     sel.disabled = true;
-    google.script.run.withSuccessHandler(() => { besked(`${esc(nr)} har nu status <b>${esc(sel.value)}</b>.`); hent(); })
-      .withFailureHandler(e => { sel.disabled = false; fejl(e); }).setStatus(nr, sel.value);
+    google.script.run.withSuccessHandler(() => { notice(`${esc(no)} is now <b>${esc(sel.value)}</b>.`); load(); })
+      .withFailureHandler(e => { sel.disabled = false; fail(e); }).setStatus(no, sel.value);
   }
 
-  function del(nr) {
-    const email = prompt('Del ' + nr + ' med (e-mail på Google-konto).\nSkriv "intern:" foran for at dele hele sagen med en kollega, fx intern:kollega@firma.dk');
-    if (!email) return;
-    const intern = email.trim().toLowerCase().startsWith('intern:');
-    const adr = email.replace(/^intern:/i, '').trim();
-    google.script.run.withSuccessHandler(url => besked(`${esc(nr)} er delt med ${esc(adr)}. <a href="${esc(url)}" target="_blank">Åbn mappen</a>`))
-      .withFailureHandler(fejl).delSag(nr, adr, intern);
+  function share(no) {
+    const input = prompt('Share ' + no + ' with (Google account email).\nPrefix with "internal:" to share the whole matter with a colleague, e.g. internal:colleague@company.com');
+    if (!input) return;
+    const internal = input.trim().toLowerCase().startsWith('internal:');
+    const email = input.replace(/^internal:/i, '').trim();
+    google.script.run.withSuccessHandler(url => notice(`${esc(no)} is shared with ${esc(email)}. <a href="${esc(url)}" target="_blank">Open folder</a>`))
+      .withFailureHandler(fail).shareMatter(no, email, internal);
   }
 
-  function opret(ev) {
-    ev.preventDefault();
-    const f = ev.target, knap = byId('opretKnap');
-    const data = Object.fromEntries(new FormData(f).entries());
-    knap.disabled = true; knap.textContent = 'Opretter sag…';
-    google.script.run.withSuccessHandler(r => {
-      knap.disabled = false; knap.textContent = 'Opret sag';
-      f.reset(); byId('ny-ansv').value = D ? D.bruger : ''; visUnder();
-      byId('ny-resultat').innerHTML = `<div class="besked">
-        <b>Sag ${esc(r.nr)} er oprettet.</b><br><br>
-        Mail-tag: <span class="tag">${esc(r.tag)}</span> <button class="knap lys lille" onclick="kopier('${esc(r.tag)}')">Kopiér</button><br>
-        Skriv tagget i emnefeltet på alle mails om sagen – så arkiveres de automatisk på sagen.<br><br>
-        <a href="${esc(r.mappeUrl)}" target="_blank">Åbn sagsmappen</a> · <a href="${esc(r.notatUrl)}" target="_blank">Åbn sagsnotat</a>
-        ${r.fejl && r.fejl.length ? `<br><br><span class="rod">Kunne ikke dele med: ${esc(r.fejl.join(', '))} (kræver Google-konto).</span>` : ''}
-      </div>`;
-      if (ventendeMail) { const id = ventendeMail; ventendeMail = null; knyt(id, r.nr); }
-      hent();
-    }).withFailureHandler(e => { knap.disabled = false; knap.textContent = 'Opret sag'; fejl(e); }).opretSag(data);
-  }
+  // ---------- emails ----------
+  const E_COLS = [['date', 'Date'], ['direction', ''], ['from', 'From'], ['to', 'To'], ['subject', 'Subject'], ['attachments', 'Attachments']];
 
-  // ---------- Mails ----------
-  let M = null, indholdsfund = null, mSort = { felt: 'dato', op: false };
-  const M_KOL = [['dato', 'Dato'], ['retning', ''], ['fra', 'Fra'], ['til', 'Til'], ['emne', 'Emne'], ['vedh', 'Vedhæftninger']];
+  function viewEmails(no) { byId('e-matter').value = no; E = null; show('emails'); }
+  function loadEmails() {
+    byId('t-emails').innerHTML = '<tr><td class="loading">Loading emails…</td></tr>';
+    clearContent(true);
+    google.script.run.withSuccessHandler(e => { E = e; drawEmails(); }).withFailureHandler(fail).getEmails(byId('e-matter').value);
+  }
+  function sortEmails(f) { eSort = { field: f, asc: eSort.field === f ? !eSort.asc : f !== 'date' }; drawEmails(); }
+  function searchContent() {
+    const q = byId('e-content').value.trim(); if (q.length < 2) return;
+    byId('t-emails').innerHTML = '<tr><td class="loading">Searching content…</td></tr>';
+    google.script.run.withSuccessHandler(mids => { contentHits = new Set(mids); byId('e-clear').style.display = ''; drawEmails(); })
+      .withFailureHandler(fail).searchEmailContent(byId('e-matter').value, q);
+  }
+  function clearContent(quiet) { contentHits = null; byId('e-content').value = ''; byId('e-clear').style.display = 'none'; if (!quiet && E) drawEmails(); }
 
-  function visMails(nr) { byId('m-sag').value = nr; M = null; skift('mails'); }
-  function hentMails() {
-    byId('t-mails').innerHTML = '<tr><td class="indlaes">Henter mails…</td></tr>';
-    nulstilIndhold(true);
-    google.script.run.withSuccessHandler(m => { M = m; tegnMails(); }).withFailureHandler(fejl).hentMails(byId('m-sag').value);
-  }
-  function sorter(felt) { mSort = { felt: felt, op: mSort.felt === felt ? !mSort.op : felt !== 'dato' }; tegnMails(); }
-  function soegIndhold() {
-    const q = byId('m-indhold').value.trim(); if (q.length < 2) return;
-    byId('t-mails').innerHTML = '<tr><td class="indlaes">Søger i indhold…</td></tr>';
-    google.script.run.withSuccessHandler(mids => { indholdsfund = new Set(mids); byId('m-nulstil').style.display = ''; tegnMails(); })
-      .withFailureHandler(fejl).soegMailindhold(byId('m-sag').value, q);
-  }
-  function nulstilIndhold(stille) {
-    indholdsfund = null; byId('m-indhold').value = ''; byId('m-nulstil').style.display = 'none';
-    if (!stille && M) tegnMails();
-  }
-
-  function tegnMails() {
-    if (!M) return;
-    const alle = !byId('m-sag').value, q = byId('m-filter').value.toLowerCase(), r = byId('m-retning').value;
-    const kol = alle ? [['nr', 'Sag']].concat(M_KOL) : M_KOL;
-    byId('m-hoved').innerHTML = kol.map(k => `<th class="sort" onclick="sorter('${k[0]}')">${k[1]}${mSort.felt === k[0] ? (mSort.op ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th></th>';
-    const rows = M.filter(m => (!r || m.retning === r) && (!indholdsfund || indholdsfund.has(m.mid)) &&
-      (!q || [m.fra, m.til, m.cc, m.emne, m.vedh, m.nr].join(' ').toLowerCase().includes(q)));
-    const f = mSort.felt, dir = mSort.op ? 1 : -1;
-    rows.sort((a, b) => String(a[f] || '').localeCompare(String(b[f] || ''), 'da') * dir);
-    const knap = (url, tekst, titel) => url ? `<a class="knap lys lille" style="text-decoration:none" href="${esc(url)}" target="_blank" title="${titel || ''}">${tekst}</a> ` : '';
-    const linje = (m, kl, skjult) => `<tr class="${kl || ''}"${skjult ? ' style="display:none"' : ''}>${alle ? `<td>${esc(m.nr)}</td>` : ''}
-      <td style="white-space:nowrap">${esc(m.dato.slice(0, 10))} <span class="muted">${esc(m.dato.slice(11, 16))}</span></td>
-      <td><span class="retning ${esc(m.retning)}">${esc(m.retning)}</span></td>
-      <td>${esc(m.fra)}</td><td class="muted">${esc(m.til)}${m.cc ? '<br>Cc: ' + esc(m.cc) : ''}</td>
-      <td>${esc(m.emne || '(intet emne)')}</td><td class="muted">${esc(m.vedh)}</td>
-      <td style="white-space:nowrap">${knap(m.pdf, 'PDF')}${knap(m.eml, 'Hent .eml', 'Originalmailen – åbnes i Outlook, Apple Mail eller Thunderbird')}${knap(m.gmail, 'Gmail', 'Virker kun, hvis mailen ligger i din egen Gmail')}</td></tr>`;
+  function drawEmails() {
+    if (!E) return;
+    const all = !byId('e-matter').value, q = byId('e-filter').value.toLowerCase(), dir = byId('e-dir').value;
+    const cols = all ? [['no', 'Matter']].concat(E_COLS) : E_COLS;
+    byId('e-head').innerHTML = cols.map(c => `<th class="sort" onclick="sortEmails('${c[0]}')">${c[1]}${eSort.field === c[0] ? (eSort.asc ? ' ▲' : ' ▼') : ''}</th>`).join('') + '<th></th>';
+    const rows = E.filter(m => (!dir || m.direction === dir) && (!contentHits || contentHits.has(m.mid)) &&
+      (!q || [m.from, m.to, m.cc, m.subject, m.attachments, m.no].join(' ').toLowerCase().includes(q)));
+    const f = eSort.field, k = eSort.asc ? 1 : -1;
+    rows.sort((a, b) => String(a[f] || '').localeCompare(String(b[f] || ''), 'en') * k);
+    const link = (url, label, title) => url ? `<a class="btn light small" href="${esc(url)}" target="_blank" title="${title || ''}">${label}</a> ` : '';
+    const line = (m, cls, hidden) => `<tr class="${cls || ''}"${hidden ? ' style="display:none"' : ''}>${all ? `<td>${esc(m.no)}</td>` : ''}
+      <td style="white-space:nowrap">${esc(m.date.slice(0, 10))} <span class="muted">${esc(m.date.slice(11, 16))}</span></td>
+      <td><span class="dir ${esc(m.direction)}">${esc(m.direction)}</span></td>
+      <td>${esc(m.from)}</td><td class="muted">${esc(m.to)}${m.cc ? '<br>Cc: ' + esc(m.cc) : ''}</td>
+      <td>${esc(m.subject || '(no subject)')}</td><td class="muted">${esc(m.attachments)}</td>
+      <td style="white-space:nowrap">${link(m.pdf, 'PDF')}${link(m.eml, 'Download .eml', 'Original email – opens in Outlook, Apple Mail or Thunderbird')}${link(m.gmail, 'Gmail', 'Works only if the email is in your own Gmail')}</td></tr>`;
     let html = '';
-    if (byId('m-traade').checked) {
-      const grupper = {}, orden = [];
-      rows.forEach(m => { const k = m.traad || m.mid; if (!grupper[k]) { grupper[k] = []; orden.push(k); } grupper[k].push(m); });
-      orden.forEach((k, i) => {
-        const g = grupper[k], sidst = g.reduce((a, b) => a.dato > b.dato ? a : b);
-        const emne = (sidst.emne || '').replace(/^((re|sv|fw|fwd|vs)\s*:\s*)+/i, '') || '(intet emne)';
-        html += `<tr class="traad" onclick="document.querySelectorAll('.tg${i}').forEach(x => x.style.display = x.style.display === 'none' ? '' : 'none')">
-          <td colspan="${kol.length + 1}">▸ ${esc(emne)} <span class="muted">· ${g.length} mail${g.length > 1 ? 's' : ''} · seneste ${esc(sidst.dato.slice(0, 10))}</span></td></tr>`;
-        html += g.map(m => linje(m, 'i-traad tg' + i, true)).join('');
+    if (byId('e-threads').checked) {
+      const groups = {}, order = [];
+      rows.forEach(m => { const key = m.thread || m.mid; if (!groups[key]) { groups[key] = []; order.push(key); } groups[key].push(m); });
+      order.forEach((key, i) => {
+        const g = groups[key], last = g.reduce((a, b) => a.date > b.date ? a : b);
+        const subject = (last.subject || '').replace(/^((re|sv|fw|fwd|vs)\s*:\s*)+/i, '') || '(no subject)';
+        html += `<tr class="thread" onclick="document.querySelectorAll('.tg${i}').forEach(x => x.style.display = x.style.display === 'none' ? '' : 'none')">
+          <td colspan="${cols.length + 1}">▸ ${esc(subject)} <span class="muted">· ${g.length} email${g.length > 1 ? 's' : ''} · latest ${esc(last.date.slice(0, 10))}</span></td></tr>`;
+        html += g.map(m => line(m, 'in-thread tg' + i, true)).join('');
       });
-    } else html = rows.map(m => linje(m)).join('');
-    byId('t-mails').innerHTML = html || `<tr><td colspan="${kol.length + 1}" class="indlaes">Ingen mails${indholdsfund ? ', der matcher søgningen' : ''}.</td></tr>`;
-    byId('m-antal').textContent = rows.length + ' af ' + M.length + ' mails' + (indholdsfund ? ' (indholdssøgning aktiv)' : '');
+    } else html = rows.map(m => line(m)).join('');
+    byId('t-emails').innerHTML = html || `<tr><td colspan="${cols.length + 1}" class="loading">No emails${contentHits ? ' match the search' : ''}.</td></tr>`;
+    byId('emailsCount').textContent = rows.length + ' of ' + E.length + ' emails' + (contentHits ? ' (content search active)' : '');
   }
 
-  // ---------- Uden sag ----------
-  let K = null, ventendeMail = null;
-  function hentKoe() {
-    google.script.run.withSuccessHandler(k => { K = k; tegnKoe(); }).withFailureHandler(fejl).hentUdenSag();
+  // ---------- unfiled ----------
+  function loadUnfiled() { google.script.run.withSuccessHandler(u => { U = u; drawUnfiled(); }).withFailureHandler(fail).getUnfiled(); }
+  function drawUnfiled() {
+    byId('unfiledCount').textContent = U.items.length || '';
+    const options = '<option value="">Choose matter…</option>' + U.matters.map(m => `<option value="${esc(m.no)}">${esc(m.no)} ${esc(m.title)}</option>`).join('');
+    byId('t-unfiled').innerHTML = U.items.map(p => `<tr id="u-${esc(p.id)}">
+      <td style="white-space:nowrap">${esc(p.date.slice(0, 10))}<div class="muted">${esc(p.date.slice(11, 16))}</div></td>
+      <td>${esc(p.from)}</td><td><a href="${esc(p.link)}" target="_blank">${esc(p.subject || '(no subject)')}</a></td>
+      <td><div class="suggest">${p.suggestions.map(s => `<button class="btn light small" onclick="fileTo('${esc(p.id)}','${esc(s.no)}')">→ ${esc(s.no)} ${esc(s.title)}</button><small>${esc(s.reason)}</small>`).join('')}
+        <div style="display:flex;gap:6px;margin-top:4px"><select id="u-sel-${esc(p.id)}" style="max-width:260px;padding:4px 6px;font-size:12px">${options}</select>
+        <button class="btn light small" onclick="fileTo('${esc(p.id)}', byId('u-sel-${esc(p.id)}').value)">File</button></div></div></td>
+      <td style="white-space:nowrap"><button class="btn light small" onclick="newFromEmail('${esc(p.id)}')">New matter</button>
+        <button class="btn light small" onclick="dismiss('${esc(p.id)}')">Not a matter</button></td></tr>`).join('') ||
+      '<tr><td colspan="5" class="loading">Nothing waiting. 🎉</td></tr>';
   }
-  function tegnKoe() {
-    byId('koeAntal').textContent = K.poster.length || '';
-    const valg = '<option value="">Vælg sag…</option>' + K.sager.map(s => `<option value="${esc(s.nr)}">${esc(s.nr)} ${esc(s.titel)}</option>`).join('');
-    byId('t-koe').innerHTML = K.poster.map(p => `<tr id="koe-${esc(p.id)}">
-      <td style="white-space:nowrap">${esc(p.dato.slice(0, 10))}<br><small style="color:var(--dæmpet)">${esc(p.dato.slice(11, 16))}</small></td>
-      <td>${esc(p.fra)}</td>
-      <td><a href="${esc(p.link)}" target="_blank">${esc(p.emne || '(intet emne)')}</a></td>
-      <td><div class="forslag">${p.forslag.map(f => `<button class="knap lys lille" onclick="knyt('${esc(p.id)}','${esc(f.nr)}')">→ ${esc(f.nr)} ${esc(f.titel)}</button><small>${esc(f.grund)}</small>`).join('')}
-        <div class="knyt"><select id="valg-${esc(p.id)}">${valg}</select>
-        <button class="knap lys lille" onclick="knyt('${esc(p.id)}', byId('valg-${esc(p.id)}').value)">Knyt</button></div></div></td>
-      <td style="white-space:nowrap">
-        <button class="knap lys lille" onclick="nySagFraMail('${esc(p.id)}')">Ny sag</button>
-        <button class="knap lys lille" onclick="afvis('${esc(p.id)}')">Ikke en sag</button>
-      </td></tr>`).join('') || '<tr><td colspan="5" class="indlaes">Ingen mails venter. 🎉</td></tr>';
+  function fileTo(id, no) {
+    if (!no) { notice('Choose a matter first.', true); return; }
+    google.script.run.withSuccessHandler(r => { notice(`${r.count} email(s) filed on <b>${esc(r.no)}</b>. Future replies in the conversation follow automatically.`); loadUnfiled(); load(); })
+      .withFailureHandler(fail).fileToMatter(id, no);
   }
-  function knyt(id, nr) {
-    if (!nr) { besked('Vælg en sag først.', true); return; }
+  function dismiss(id) { google.script.run.withSuccessHandler(loadUnfiled).withFailureHandler(fail).dismissSuggestion(id); }
+  function newFromEmail(id) {
+    const p = U.items.find(x => x.id === id); if (!p) return;
+    pendingEmail = id;
+    const f = byId('newForm');
+    f.title.value = (p.subject || '').replace(/^((re|sv|fw|fwd|vs)\s*:\s*)+/i, '');
+    f.description.value = 'Opened from an email from ' + p.from + ' (' + p.date.slice(0, 10) + ').';
+    show('new');
+    notice('Complete and create the matter – the email and its conversation are filed automatically afterwards.');
+  }
+  function syncNow() {
+    const b = byId('syncBtn'); b.disabled = true; b.textContent = 'Syncing… (may take a few minutes)';
+    google.script.run.withSuccessHandler(() => { b.disabled = false; b.textContent = 'Sync now'; loadUnfiled(); load(); })
+      .withFailureHandler(e => { b.disabled = false; b.textContent = 'Sync now'; fail(e); }).syncAll();
+  }
+
+  // ---------- new matter ----------
+  function showSubArea() {
+    const subs = (D && D.areaSubs[byId('n-area').value]) || [];
+    byId('n-sub-field').style.display = subs.length ? '' : 'none';
+    byId('n-sub').required = !!subs.length;
+    byId('n-sub').innerHTML = subs.length ? '<option value="">Choose…</option>' + subs.map(s => `<option>${esc(s)}</option>`).join('') : '';
+  }
+  function createMatterSubmit(ev) {
+    ev.preventDefault();
+    const f = ev.target, b = byId('createBtn');
+    const data = Object.fromEntries(new FormData(f).entries());
+    b.disabled = true; b.textContent = 'Creating matter…';
     google.script.run.withSuccessHandler(r => {
-      besked(`${r.antal} mail(s) er knyttet til <b>${esc(r.nr)}</b>. Fremtidige svar i tråden kommer automatisk med.`);
-      hentKoe(); hent();
-    }).withFailureHandler(fejl).knytTilSag(id, nr);
-  }
-  function afvis(id) {
-    google.script.run.withSuccessHandler(() => { const r = byId('koe-' + id); if (r) r.remove(); hentKoe(); })
-      .withFailureHandler(fejl).afvisForslag(id);
-  }
-  function nySagFraMail(id) {
-    const p = K.poster.find(x => x.id === id); if (!p) return;
-    ventendeMail = id;
-    const f = byId('nyForm');
-    f.titel.value = (p.emne || '').replace(/^((re|sv|fw|fwd|vs)\s*:\s*)+/i, '');
-    f.beskrivelse.value = 'Oprettet fra mail fra ' + p.fra + ' (' + p.dato.slice(0, 10) + ').';
-    skift('ny');
-    besked('Udfyld og opret sagen – mailen og dens tråd knyttes automatisk bagefter.');
-  }
-  function synkNu() {
-    const k = byId('synkKnap'); k.disabled = true; k.textContent = 'Synkroniserer… (kan tage et par minutter)';
-    google.script.run.withSuccessHandler(() => { k.disabled = false; k.textContent = 'Synkronisér nu'; hentKoe(); hent(); })
-      .withFailureHandler(e => { k.disabled = false; k.textContent = 'Synkronisér nu'; fejl(e); }).synkroniser();
+      b.disabled = false; b.textContent = 'Create matter';
+      f.reset(); byId('n-owner').value = D ? D.user : ''; showSubArea();
+      byId('newResult').innerHTML = `<div class="notice"><b>Matter ${esc(r.no)} has been created.</b><br><br>
+        Emails are filed automatically when they reply to a filed email or mention the matter number. To be sure, you can put
+        <span class="tag">${esc(r.tag)}</span> <button class="btn light small" onclick="copy('${esc(r.tag)}')">Copy</button> in the subject.<br><br>
+        <a href="${esc(r.folderUrl)}" target="_blank">Open matter folder</a> · <a href="${esc(r.noteUrl)}" target="_blank">Open matter note</a>
+        ${r.failed && r.failed.length ? `<br><br><span class="late">Could not share with: ${esc(r.failed.join(', '))} (a Google account is required).</span>` : ''}</div>`;
+      if (pendingEmail) { const id = pendingEmail; pendingEmail = null; fileTo(id, r.no); }
+      load();
+    }).withFailureHandler(e => { b.disabled = false; b.textContent = 'Create matter'; fail(e); }).createMatter(data);
   }
 
-  function rapport() {
-    const k = byId('rapportKnap'); k.disabled = true; k.textContent = 'Laver rapport…';
-    google.script.run.withSuccessHandler(url => {
-      k.disabled = false; k.textContent = 'Lav Slides-rapport';
-      besked(`Rapporten er klar: <a href="${esc(url)}" target="_blank">Åbn i Google Slides</a> (gemt i "02 Rapporter").`);
-    }).withFailureHandler(e => { k.disabled = false; k.textContent = 'Lav Slides-rapport'; fejl(e); }).lavRapport();
+  function report() {
+    const b = byId('reportBtn'); b.disabled = true; b.textContent = 'Building report…';
+    google.script.run.withSuccessHandler(url => { b.disabled = false; b.textContent = 'Slides report';
+      notice(`The report is ready: <a href="${esc(url)}" target="_blank">Open in Google Slides</a> (saved in "02 Reports").`); })
+      .withFailureHandler(e => { b.disabled = false; b.textContent = 'Slides report'; fail(e); }).createReport();
   }
 
-  function kopier(t) {
+  function copy(t) {
     const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
-    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
-    ta.remove();
-    if (!ok && navigator.clipboard) navigator.clipboard.writeText(t).then(() => besked(`Kopieret: <span class="tag">${esc(t)}</span>`));
-    else besked(`Kopieret: <span class="tag">${esc(t)}</span>`);
+    try { document.execCommand('copy'); } catch (e) {}
+    ta.remove(); notice(`Copied: <span class="tag">${esc(t)}</span>`);
   }
 
-  hent();
-  hentKoe();
+  load();
+  loadUnfiled();
 </script>
 </body>
 </html>
