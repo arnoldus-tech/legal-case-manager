@@ -26,6 +26,7 @@ It is designed by a lawyer, with the trade-offs a legal function cares about –
 
 | | |
 |---|---|
+| **Ask Legal – AI intake assistant** | Employees describe their need in a chat. The assistant (Claude) asks follow-up questions, opens the matter with area, priority, deadline and a summary, produces a draft from a template for standard requests (self-service, e.g. a mutual NDA), and hands everything else to a lawyer with a prepared summary, suggested next steps and the conversation. It acts only through four tools and follows an editable list of hand-over rules |
 | **Intake** | A web form opens a matter with a unique number (`COM-2026-0007` = area code, year, running number), a Drive folder structure, a matter note (from an optional template) and a Gmail label |
 | **Matter areas** | 15 default areas for the legal function of a listed company – capital markets, corporate, governance, M&A, commercial contracts, IT, IP, employment, data protection, export control, compliance, competition, ESG, disputes and general advice. Areas can have sub-areas: commercial contracts are split into *Sales*, *Procurement* and *Collaboration*; IP into patents, trademarks, licensing and *NDAs* |
 | **Email filing without tags** | Emails are filed automatically when they reply to a filed email (`In-Reply-To` / `References`), belong to a filed conversation, are sent to a plus address (`legal+COM-2026-0007@…`) or mention the matter number. Filed as PDF + original `.eml` + attachments, labelled in Gmail and de-duplicated across team mailboxes via `Message-ID`. Google system notifications are never filed |
@@ -78,10 +79,20 @@ Web app (HtmlService): dashboard, matters, emails, unfiled queue, intake form
 - **Objective figures.** The dashboard and report show counts and sizes – not estimated time.
 - **No hard-coded IDs.** Setup discovers or creates the folder structure and stores IDs in Script Properties, so the code can be deployed to any Drive.
 
+## AI and data governance
+
+The assistant is built as a showcase with fictitious data. For real use, these choices are deliberate:
+
+- **Human in the loop.** The assistant never sends, signs or approves anything. Non-standard requests always go to a lawyer, following the *Escalation rules* sheet – which the legal team edits, not the model.
+- **Minimal data.** Only the conversation and the template and rule lists are sent to the model – no other matters, emails or documents. The intake page tells employees not to enter confidential information beyond what is needed.
+- **Narrow tools.** The model can open a matter, create a draft from an approved template, complete a self-service matter and hand over to a lawyer – nothing else.
+- **Traceable.** Every action is logged in the Activity sheet, and the conversation is saved in the matter note.
+- **Key handling.** The API key lives in Script Properties, never in the code. In production it belongs in a proper secret store, with a data processing agreement, no training on customer data, an agreed data location and a DPIA in place.
+
 ## Roadmap
 
 1. ~~Thread recognition and "Unfiled" queue~~ ✅ · ~~Email list per matter~~ ✅ · ~~Interactive dashboard~~ ✅
-2. **AI triage** – suggested area, sub-area, priority, deadline and summary for new matters and unfiled emails, with human approval
+2. ~~**Ask Legal** – AI intake, self-service NDA and hand-over~~ ✅ · next: AI suggestions for unfiled emails, and review of counterparty NDAs against a playbook
 3. **"Get this email in my Gmail"** – re-import the archived `.eml` so a colleague can reply in the original thread (e.g. during holidays), with per-matter deputies
 4. **Contact register** per matter, so contact matches can be filed automatically instead of suggested
 5. **Gmail add-on** – "File to matter" and "Create matter from this email" in the Gmail side panel

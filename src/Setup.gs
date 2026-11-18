@@ -17,6 +17,10 @@ function onOpen() {
     .addItem('Create Slides report', 'createReportFromMenu')
     .addSeparator()
     .addItem('Enable automatic email sync for me', 'installSyncTrigger')
+    .addSubMenu(ui.createMenu('AI assistant')
+      .addItem('Open "Ask Legal"', 'showAskLegal')
+      .addItem('Set API key…', 'setAiKey')
+      .addItem('Test the connection', 'testAiConnection'))
     .addItem('Setup (run first)', 'setup')
     .addSubMenu(ui.createMenu('Demo')
       .addItem('Create demo matters', 'createDemoMatters')
@@ -50,7 +54,7 @@ function setup() {
   writeHeaders_(st, ['Setting', 'Value']);
   const existing = st.getLastRow() > 1 ? st.getRange(2, 1, st.getLastRow() - 1, 1).getValues().flat() : [];
   DEFAULT_SETTINGS.filter(r => existing.indexOf(r[0]) < 0).forEach(r => {
-    st.appendRow(r[0] === SETTING.INTERNAL ? [r[0], Session.getEffectiveUser().getEmail()] : r);
+    st.appendRow(r[0] === SETTING.INTERNAL || r[0] === SETTING.DEFAULT_OWNER ? [r[0], Session.getEffectiveUser().getEmail()] : r);
   });
   st.autoResizeColumn(1);
 
@@ -59,6 +63,7 @@ function setup() {
   compactSheet_(ss.getSheetByName(SHEETS.ACTIVITY), ACTIVITY_COLS.length);
   compactSheet_(ss.getSheetByName(SHEETS.EMAILS), EMAIL_COLS.length);
   formatMattersSheet_(ss);
+  ensureDemoTemplate_();
   try { GmailApp.getUserLabelByName(CFG.LABEL_ROOT) || GmailApp.createLabel(CFG.LABEL_ROOT); } catch (e) { /* Gmail not available */ }
   installSyncTrigger(true);
 
@@ -81,10 +86,17 @@ function ensureSheets_(ss) {
   }
   add(SHEETS.ACTIVITY, ACTIVITY_COLS);
   add(SHEETS.EMAILS, EMAIL_COLS);
+  [[SHEETS.TEMPLATES, TEMPLATE_COLS, DEFAULT_TEMPLATES], [SHEETS.ESCALATION, ESCALATION_COLS, DEFAULT_ESCALATION]].forEach(x => {
+    if (ss.getSheetByName(x[0])) return;
+    const sh = ss.insertSheet(x[0]);
+    writeHeaders_(sh, x[1]);
+    sh.getRange(2, 1, x[2].length, x[1].length).setValues(x[2]);
+    sh.setColumnWidths(1, x[1].length, 320);
+  });
   if (!ss.getSheetByName(SHEETS.SETTINGS)) {
     const s = ss.insertSheet(SHEETS.SETTINGS);
     writeHeaders_(s, ['Setting', 'Value']);
-    const v = DEFAULT_SETTINGS.map(r => r[0] === SETTING.INTERNAL ? [r[0], Session.getEffectiveUser().getEmail()] : r);
+    const v = DEFAULT_SETTINGS.map(r => r[0] === SETTING.INTERNAL || r[0] === SETTING.DEFAULT_OWNER ? [r[0], Session.getEffectiveUser().getEmail()] : r);
     s.getRange(2, 1, v.length, 2).setValues(v);
     s.autoResizeColumn(1);
   }
